@@ -163,6 +163,11 @@ void Scam::TeX::reset()
 	msystem("rm " + fn_prefix + ".*");
 }
 
+std::string Scam::TeX::file_name() const
+{
+	return fn_prefix + ".svg";
+}
+
 Scam::ptr<Scam::SvgFile> Scam::TeX::svg() const
 {
 	make_svg();

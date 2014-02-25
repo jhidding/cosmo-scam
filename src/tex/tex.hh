@@ -32,11 +32,11 @@ namespace Scam
 		std::string	preamble;
 		std::string	fn_prefix;
 
-		void make_svg() const;
-
 		public:
+			void make_svg() const;
 			TeX(std::string const preamble_ = "", unsigned code = rand());
 			void reset();
+			std::string file_name() const;
 			ptr<SvgFile> svg() const;
 			virtual ~TeX();
 	};
