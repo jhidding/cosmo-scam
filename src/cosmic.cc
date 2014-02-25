@@ -131,17 +131,42 @@ Array<Vertex> read_abell(std::string const &fn)
 		Vertex v(Point(90,90,90) + spherical_to_cartesian(sg_ra, sg_dec, 1.0));
 		v.set_info("r", C.z * 2997.92458);
 
+		std::string name;
 		if (C.name != "")
+		{
+			name = C.name;
 			v.set_info("name", C.name);
+		}
 		else
+		{
+			name = "A"+C.A_ID;
 			v.set_info("name", "A"+C.A_ID);
+		}
 
 		v.set_info("ox", C.ox); v.set_info("oy", C.oy);
+		TeX label; label << "\\color{White}" << name;
+		label.make_svg();
+		v.set_info("svg", label.file_name());
 
 		A.push_back(v);
 	}
 
 	std::cerr << "Ok\n";
+	return A;
+}
+
+Array<Vertex> read_haloes(std::string const &fn)
+{
+	Array<Vertex> A;
+	std::ifstream fi(fn);
+	while (!fi.eof())
+	{
+		FOF::Halo H; fi >> H;
+		
+		Vertex v(H.x, H.y, H.z);
+		v.set_info("mass", H.mass);
+		A.push_back(v);
+	}
 	return A;
 }
 
@@ -227,10 +252,10 @@ std::function<void (Context)> prepare_context_rv(unsigned w, unsigned h, double 
 		cx->save();
 		cx->translate(-L/2, L/4 - 2*margin);
 		cx->scale(margin*3, margin*3);
-		cx->rectangle(0,0, 2,1);
+		/*cx->rectangle(0,0, 2,1);
 		cx->set_line_width(0.001);
 		cx->set_source_rgb(1,0,1);
-		cx->stroke();
+		cx->stroke();*/
 
 		cx->move_to(0.9,0.24);
 		cx->rel_curve_to(0.01, 0.03, 0.02, 0.04, 0.05, 0.05);
@@ -256,14 +281,14 @@ std::function<void (Context)> prepare_context_rv(unsigned w, unsigned h, double 
 		cx->restore();
 		cx->restore();
 
-		cx->save();
+		/*cx->save();
 		cx->translate(L/2-margin*6, L/4 - 2*margin);
 		cx->scale(margin*3, margin*3);
 		cx->rectangle(0,0, 2,1);
 		cx->set_line_width(0.001);
 		cx->set_source_rgb(1,0,1);
 		cx->stroke();
-		cx->restore();
+		cx->restore();*/
 
 		cx->set_line_join(Cairo::LINE_JOIN_ROUND);
 	};
@@ -307,6 +332,8 @@ void command_cosmic(int argc_, char **argv_)
 			"include Abell cluster catalog."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
+		Option({Option::VALUED | Option::CHECK, "fof", "haloes", "none",
+			"include Halo catalog."}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", date_string(),
 			"identifier for filenames."}),
 		Option({Option::VALUED | Option::CHECK, "L", "size", "100",
@@ -387,26 +414,33 @@ void command_cosmic(int argc_, char **argv_)
 	else
 		clusters = Nothing;
 
+	Maybe<Array<Vertex>> haloes;
+	if (argv["haloes"] != "none")
+		haloes = Just(read_haloes(argv["haloes"]));
+	else
+		haloes = Nothing;
+
 	double step = argv.get<double>("rstep");
 	double dr = argv.get<double>("dr");
+
+	TeX label_height; label_height << "lg";
+	auto svg_height_ = label_height.svg();
+	double sh = svg_height_->height();
 
 	auto cluster_label = (argv.get<bool>("reverse") ?
 		[] (Info info, Context cx)
 		{
 			auto ox_ = info.get<double>("ox"), oy_ = info.get<double>("oy");
-			auto name_ = info.get_str("name");
+			//auto name_ = info.get_str("name");
+			auto svg_fn_ = info.get_str("svg");
 			double ox = 0.15; if (ox_) ox = *ox_;
 			double oy = 0.15; if (oy_) oy = *oy_;
-			std::string name = "empty-string"; if (name_) name = *name_;
 
-			TeX label_height; label_height << "lg";
-			auto svg_height = label_height.svg();
+			if (not svg_fn_) return;
 
-			std::cout << "label: " << name; //<< std::endl;
-			TeX label; label << "\\color{White}" << name;
-			auto svg = label.svg();
-			double s = 0.05 / svg_height->height();
-			double w = svg->width() * s;
+			SvgFile svg(*svg_fn_);
+			double s = 0.05 / 14;
+			double w = svg.width() * s;
 			double x, y;
 
 			cx->rel_line_to(ox, oy);
@@ -418,7 +452,6 @@ void command_cosmic(int argc_, char **argv_)
 			cx->set_source_rgb(0,0.5,1);
 			cx->stroke();
 
-			std::cout << " " << x << ", " << y << std::endl;
 			cx->move_to(x, y);
 			cx->rel_move_to(-w/2 - 0.05/4, (oy < 0 ? -0.05 - 0.05/4 : 0.05/4));
 			cx->rel_curve_to(0.01/4, -0.03/4, 0.02/4, -0.04/4, 0.05/4, -0.05/4);
@@ -438,7 +471,7 @@ void command_cosmic(int argc_, char **argv_)
 			cx->save();
 			cx->translate(x - w/2, (oy < 0 ? y - 0.05 - 0.05/4 : y + 0.05/4));
 			cx->scale(s, s);
-			svg->render(cx);
+			svg.render(cx);
 			cx->restore();
 		} :
 		[] (Info info, Context cx)
@@ -593,14 +626,53 @@ void command_cosmic(int argc_, char **argv_)
 			cx->fill();
 		} );
 
+	/* How to draw a galaxy */
+	auto halo_material = (argv.get<bool>("reverse") ?
+		[] (Info info, Context cx)
+		{
+			auto m_ = info.get<double>("mass");
+			double m = 1.0; if (m_) m = *m_;
+			double s = log(m)/20.;
+			cx->set_source_rgba(0.0,0.4,0.8,0.5);
+			cx->rel_move_to(-0.01*s,0);
+			cx->rel_line_to(0.01*s, -0.01*s);
+			cx->rel_line_to(0.01*s, 0.01*s);
+			cx->rel_line_to(-0.01*s, 0.01*s);
+			cx->rel_line_to(-0.01*s, -0.01*s);
+			//cx->set_line_width(0.01);
+			//cx->rel_line_to(0,0);
+			//cx->stroke();
+			cx->close_path();
+			cx->fill_preserve();
+			cx->set_line_width(0.001);
+			cx->set_source_rgba(1,1,1,0.8);
+			cx->stroke();
+		} :
+		[] (Info info, Context cx)
+		{
+			cx->set_source_rgba(1,0,0,0.5);
+			cx->rel_move_to(-0.01,0);
+			cx->rel_line_to(0.01, -0.01);
+			cx->rel_line_to(0.01, 0.01);
+			cx->rel_line_to(-0.01, 0.01);
+			cx->rel_line_to(-0.01, -0.01);
+			//cx->set_line_width(0.01);
+			//cx->rel_line_to(0,0);
+			//cx->stroke();
+			cx->close_path();
+			cx->fill();
+		} );
+
 	for (double r = 0.0; r + dr < L/2; r += step)
 	{
 		//std::string fn_output = timed_filename(argv["id"], Misc::format("slice-", r, "-", r+dr), t, "pdf");
-		std::string fn_output_png = timed_filename(argv["id"], Misc::format("slice-", r, "-", r+dr), t, "png");
+		std::string fn_output_png = timed_filename(argv["id"], 
+			Misc::format("slice-", r, "-", r+dr), t, "png");
 		Sphere S1(Point(L/2,L/2,L/2), r), S2(Point(L/2,L/2,L/2), r + dr);
 		std::cout << "filtering polygons ... radius " << r << "\n";
 		Array<Polygon> filtered_polygons;
 		Array<Vertex>  filtered_galaxies;
+		Array<Vertex>  filtered_haloes;
 		Array<Segment> filtered_segments;
 		Array<Vertex>  filtered_clusters;
 
@@ -634,6 +706,13 @@ void command_cosmic(int argc_, char **argv_)
 			if ((not S1.is_below(v)) and S2.is_below(v))
 				filtered_galaxies.push_back(v);
 		}
+		if (haloes)
+		for (Vertex const &v : *haloes)
+		{
+			if ((not S1.is_below(v)) and S2.is_below(v))
+				filtered_haloes.push_back(v);
+		}
+		std::cerr << "including " << filtered_haloes.size() << " haloes\n";
 
 		for (Segment const &s : segments)
 		{
@@ -658,6 +737,10 @@ void command_cosmic(int argc_, char **argv_)
 		if (galaxies)
 		scene.push_back(ptr<RenderObject>(new VertexObject(
 			filtered_galaxies, galaxy_material)));
+
+		if (haloes)
+		scene.push_back(ptr<RenderObject>(new VertexObject(
+			filtered_haloes, halo_material)));
 
 		scene.push_back(ptr<RenderObject>(new VertexObject(
 			filtered_clusters, cluster_label)));

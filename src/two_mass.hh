@@ -25,6 +25,33 @@ namespace Abell
 	extern std::istream &operator>>(std::istream &in, Cluster &C);
 }
 
+
+namespace FOF
+{
+	struct Halo
+	{
+		unsigned id;
+		double x, y, z, vx, vy, vz;
+		size_t lkl;
+		double mass;
+		double sigma, sigma_v, r_sph, delta, spin;
+	};
+
+	inline std::istream &operator>>(std::istream &in, Halo &H)
+	{
+		std::string line;
+		do {
+			std::getline(in, line);
+		} while (line[0] == '#');
+
+		std::istringstream ss(line);
+		ss >> H.id >> H.x >> H.y >> H.z >> H.vx >> H.vy >> H.vz
+		   >> H.lkl >> H.mass >> H.sigma >> H.sigma_v >> H.r_sph
+		   >> H.delta >> H.spin;
+		return in;
+	}
+}
+
 namespace TwoMass
 {
 	inline double radians(double deg) { return (deg / 180.) * M_PI; }
