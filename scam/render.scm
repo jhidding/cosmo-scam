@@ -136,7 +136,7 @@
 				    
 				    (if (null? points) 
 				      (begin (display "# weird error!\n") (p 0 '() id))
-				      (p (apply max (map car points)) (map cdr points) #t material))))
+				      (p (apply min (map car points)) (map cdr points) #t material))))
 
 		    ((segment? P) (let* (
 					 ;(points (map (comp (lambda (x y z) (list z x y)) C)
@@ -151,7 +151,7 @@
 					 (material ((segment-material P) (caar points) normal)))
 				    (if (null? points)
 				      (begin (display "# weird error!\n") (p 0 '() id))
-				      (p (- (apply max (map car points)) 0.01) (map cdr points) #f material)))))))))
+				      (p (+ (apply min (map car points)) 0.1) (map cdr points) #f material)))))))))
 
   (define get-z (lambda (d) (render-data-z d)))
 
