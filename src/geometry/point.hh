@@ -60,6 +60,11 @@ namespace Scam
 			{
 				return Point_(x()+v.x(), y()+v.y(), z()+v.z());
 			}
+
+			Point_ operator-(Vector const &v) const
+			{
+				return Point_(x()-v.x(), y()-v.y(), z()-v.z());
+			}
 	};
 
 	template <typename T>

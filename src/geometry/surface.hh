@@ -63,6 +63,8 @@ namespace Scam
 		double	m_radius;
 
 		public:
+			Sphere() {}
+
 			Sphere(Point origin_, double radius_):
 				m_origin(origin_), m_radius(radius_)
 			{}
