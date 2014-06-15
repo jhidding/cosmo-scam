@@ -9,6 +9,75 @@ namespace Scam
 	using TwoMass::ga_to_sg;
 	using TwoMass::spherical_to_cartesian;
 
+	class Tully_filter
+	{
+  		// A262	136.59	-25.09	 0.0161	
+  		// A426	150.39	-13.38	 0.0183	Perseus
+  		// A347	141.17	-17.63	 0.0187	
+
+		Sphere 	S;
+		Vector  hub;
+		//Array<Segment> fogs;
+
+		public:                 
+			Tully_filter(double radius)
+			{
+				S = Sphere(Point(90, 80, 120), radius);
+				hub = Vector(0, 0, 1);
+			}
+
+			Point center() const { return S.origin(); }
+			Vector shub() const { return hub; } 
+			Array<Segment> fog() const { return Array<Segment>(0); }
+
+			Array<Vertex> operator()(Array<Vertex> A) const
+			{
+				Array<Vertex> B;
+				for (Vertex const &a : A)
+				{
+					if (S.is_below(a)) // and Top.is_below(a) and Bottom.is_below(a))
+						B.push_back(a);
+				}
+				return B;
+			}
+
+			Array<Polygon> operator()(Array<Polygon> A) const
+			{
+				Array<Polygon> B;
+
+				for (Polygon const &a : A)
+				{
+					auto T = S.split_polygon(a);
+						if (not T.first) continue;
+					/*auto U = Top.split_polygon(*T.first);
+						if (not U.first) continue;
+					auto V = Bottom.split_polygon(*U.first);
+						if (not V.first) continue;*/
+					B.push_back(*T.first);
+				}
+
+				return B;
+			}
+
+			Array<Segment> operator()(Array<Segment> A) const
+			{
+				Array<Segment> B;
+
+				for (Segment const &a : A)
+				{
+					auto T = S.split_segment(a);
+						if (not T.first) continue;
+					/*auto U = Top.split_segment(*T.first);
+						if (not U.first) continue;
+					auto V = Bottom.split_segment(*U.first);
+						if (not V.first) continue;*/
+					B.push_back(*T.first);
+				}
+
+				return B;
+			}
+	};
+
 	class Perseus_filter
 	{
   		// A262	136.59	-25.09	 0.0161	

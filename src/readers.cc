@@ -108,6 +108,17 @@ Array<Vertex> Scam::read_abell(std::string const &fn, bool dist, bool rv)
 
 		A.push_back(v);
 	}
+	
+	Vertex v(Point(90,90,90));
+	v.set_info("r", 0);
+	v.set_info("name", "Home");
+	v.set_info("ox", 0); v.set_info("oy", -0.1);
+	TeX label;	
+	if (rv) label << "\\color{White}Home";
+	else label << "Home";
+	label.make_svg();
+	v.set_info("svg", label.file_name());
+	A.push_back(v);
 
 	std::cerr << "Ok\n";
 	return A;
