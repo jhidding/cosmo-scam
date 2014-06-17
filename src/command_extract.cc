@@ -65,6 +65,8 @@ void command_tully(int argc_, char **argv_)
 			"size of the box."}),
 		Option({Option::VALUED | Option::CHECK, "t", "time", "1.0",
 			"growing mode parameter."}),
+		Option({Option::VALUED | Option::CHECK, "", "frames", "1000",
+			"number of frames to render."}),
 		Option({Option::VALUED | Option::CHECK, "f", "fila-lim", "1e6",
 			"lower limit of filament density to show."}),
 		Option({Option::VALUED | Option::CHECK, "w", "wall-lim", "20.0",
@@ -127,8 +129,9 @@ void command_tully(int argc_, char **argv_)
 	TeX label_height; label_height << "lg";
 	auto svg_height_ = label_height.svg();
 	double sh = svg_height_->height();
+	unsigned N_imag = argv.get<unsigned>("frames");
 
-	double rad = 40;
+	double rad = 30;
 	auto cluster_label = scale_material(make_cluster_label_material(rv), rad/(sqrt(2)));
 	auto wall_material = scale_material(make_wall_material(rv), rad/(sqrt(2)));
 	auto filament_material = scale_material(make_filament_material(rv), rad/(sqrt(2)));
@@ -156,7 +159,7 @@ void command_tully(int argc_, char **argv_)
 		cf(*clusters), cluster_label)));
 
 	Array<double> th;
-	for (double t = 0; t <= 4*M_PI; t += 4*M_PI/40.) th.push_back(t);
+	for (double t = 0; t <= 4*M_PI; t += 4*M_PI/N_imag) th.push_back(t);
 
 	for (unsigned i = 0; i < th.size(); ++i)
 	{	
