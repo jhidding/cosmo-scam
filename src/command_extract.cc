@@ -131,7 +131,7 @@ void command_tully(int argc_, char **argv_)
 	double sh = svg_height_->height();
 	unsigned N_imag = argv.get<unsigned>("frames");
 
-	double rad = 30;
+	double rad = 40;
 	auto cluster_label = scale_material(make_cluster_label_material(rv), rad/(sqrt(2)));
 	auto wall_material = scale_material(make_wall_material(rv), rad/(sqrt(2)));
 	auto filament_material = scale_material(make_filament_material(rv), rad/(sqrt(2)));

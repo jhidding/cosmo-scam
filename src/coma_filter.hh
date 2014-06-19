@@ -22,7 +22,7 @@ namespace Scam
 		public:                 
 			Tully_filter(double radius)
 			{
-				S = Sphere(Point(87, 90, 115), radius);
+				S = Sphere(Point(75, 90, 125), radius);
 				hub = Vector(0, 0, 1);
 			}
 
