@@ -32,6 +32,13 @@ namespace Scam
 				cut(origin, Vector::cross(shub, target - origin)),
 				shd(origin, origin - target) {}
 
+			int operator()(Point const &p) const
+			{
+				if (shd.is_below(p)) return 1;
+				if (cut.is_below(p)) return 0;
+				else return 2;
+			}
+
 			std::tuple<Maybe<Polygon>, Maybe<Polygon>, Maybe<Polygon>> 
 			operator()(Polygon const &P) const
 			{
@@ -122,6 +129,28 @@ namespace Scam
 				return Plane(
 					m_project.middle(rotate(translate(p.origin()))),
 					at_point(p.origin(), p.normal()) );
+			}
+
+			virtual std::pair<Point, Vector> operator()(Point const &p, Vector const &v)
+			{
+				typedef std::pair<Point,Vector> p_pair;
+
+				Point a; 
+				Vector b;
+				switch (m_split(p))
+				{
+					case 0: a = m_project.right(rotate(translate(p)));
+						b = m_project.right(rotate(translate(p+v)))-a;
+						return p_pair(a, b);
+
+					case 1: a = m_project.middle(rotate(translate(p)));
+						b = m_project.middle(rotate(translate(p+v)))-a;
+						return p_pair(a, b);
+
+					case 2: a = m_project.left(rotate(translate(p)));
+						b = m_project.left(rotate(translate(p+v)))-a;
+						return p_pair(a, b);
+				}
 			}
 
 			Array<Path> operator()(Polygon const &P) const

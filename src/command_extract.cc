@@ -59,6 +59,14 @@ void command_tully(int argc_, char **argv_)
 			"include Abell cluster catalog."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
+		Option({0, "v", "velocity", "false",
+			"include velocities."}),
+		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
+			"velocity vector factor."}),
+		Option({Option::VALUED | Option::CHECK, "vw", "vel-width", "1",
+			"velocity vector width."}),
+		Option({Option::VALUED | Option::CHECK, "nf", "frames", "999",
+			"number of frames in the movie."}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", date_string(),
 			"identifier for filenames."}),
 		Option({Option::VALUED | Option::CHECK, "L", "size", "180",
@@ -122,6 +130,13 @@ void command_tully(int argc_, char **argv_)
 	else
 		clusters = Nothing;
 
+	std::string fn_i_vel = Misc::format(argv["id"], ".nodes.", time_string(t), ".conan");
+	Maybe<Array<Vertex>> velocities;
+	if (argv.get<bool>("velocity"))
+		velocities = Just(read_velocities(fn_i_vel));
+	else
+		velocities = Nothing;
+
 	// A1367	234.81	 73.03	0.0215 Leo
 	// A1656	 58.09	 87.96	0.0232 Coma
 	TeX label_height; label_height << "lg";
@@ -133,6 +148,7 @@ void command_tully(int argc_, char **argv_)
 	auto wall_material = scale_material(make_wall_material(rv), rad/(sqrt(2)));
 	auto filament_material = scale_material(make_filament_material(rv), rad/(sqrt(2)));
 	auto galaxy_material = scale_material(make_galaxy_material(rv), rad*1.5/(sqrt(2)));
+	auto velocity_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), rad/(sqrt(2)));
 	
 	Tully_filter cf(rad);
 
@@ -154,9 +170,13 @@ void command_tully(int argc_, char **argv_)
 	if (clusters)
 	scene.push_back(ptr<RenderObject>(new VertexObject(
 		cf(*clusters), cluster_label)));
+	if (velocities)
+	scene.push_back(ptr<RenderObject>(new VectorObject(
+		cf(*velocities), velocity_material, argv.get<double>("vel-factor"))));
 
+	double N_frames = argv.get<double>("frames");
 	Array<double> th;
-	for (double t = 0; t <= 4*M_PI; t += 4*M_PI/40.) th.push_back(t);
+	for (double t = 0; t <= 4*M_PI; t += 4*M_PI/N_frames) th.push_back(t);
 
 	for (unsigned i = 0; i < th.size(); ++i)
 	{	
@@ -184,6 +204,14 @@ void command_perseus(int argc_, char **argv_)
 			"include Abell cluster catalog."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
+		Option({0, "v", "velocity", "false",
+			"include velocities."}),
+		Option({Option::VALUED | Option::CHECK, "nf", "frames", "999",
+			"number of frames in the movie."}),
+		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
+			"velocity vector factor."}),
+		Option({Option::VALUED | Option::CHECK, "vw", "vel-width", "1",
+			"velocity vector width."}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", date_string(),
 			"identifier for filenames."}),
 		Option({Option::VALUED | Option::CHECK, "L", "size", "180",
@@ -208,8 +236,8 @@ void command_perseus(int argc_, char **argv_)
 	double wall_lim = argv.get<double>("wall-lim");
 	double fila_lim = argv.get<double>("fila-lim");
 
-	std::string fn_i_wall = Misc::format(argv["id"], ".", time_string(t), ".walls.ply");
-	std::string fn_i_fila = Misc::format(argv["id"], ".", time_string(t), ".filam.ply");
+	std::string fn_i_wall = Misc::format(argv["id"], ".walls.", time_string(t), ".ply");
+	std::string fn_i_fila = Misc::format(argv["id"], ".filam.", time_string(t), ".ply");
 
 	std::cerr << "Reading " << fn_i_wall << " ..." << std::endl;
 	auto ply = make_ptr<PLY::PLY>();
@@ -247,6 +275,13 @@ void command_perseus(int argc_, char **argv_)
 	else
 		clusters = Nothing;
 
+	std::string fn_i_vel = Misc::format(argv["id"], ".nodes.", time_string(t), ".conan");
+	Maybe<Array<Vertex>> velocities;
+	if (argv.get<bool>("velocity"))
+		velocities = Just(read_velocities(fn_i_vel));
+	else
+		velocities = Nothing;
+
 	// A1367	234.81	 73.03	0.0215 Leo
 	// A1656	 58.09	 87.96	0.0232 Coma
 	TeX label_height; label_height << "lg";
@@ -258,7 +293,7 @@ void command_perseus(int argc_, char **argv_)
 	auto wall_material = scale_material(make_wall_material(rv), rad/(sqrt(2)));
 	auto filament_material = scale_material(make_filament_material(rv), rad/(sqrt(2)));
 	auto galaxy_material = scale_material(make_galaxy_material(rv), rad*1.5/(sqrt(2)));
-	
+	auto velocity_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), rad/(sqrt(2)));
 	Perseus_filter cf(rad);
 
 	Array<ptr<RenderObject>> scene;
@@ -279,9 +314,13 @@ void command_perseus(int argc_, char **argv_)
 	if (clusters)
 	scene.push_back(ptr<RenderObject>(new VertexObject(
 		cf(*clusters), cluster_label)));
+	if (velocities)
+	scene.push_back(ptr<RenderObject>(new VectorObject(
+		cf(*velocities), velocity_material, argv.get<double>("vel-factor"))));
 
 	Array<double> th;
-	for (double t = 0; t <= 4*M_PI; t += 4*M_PI/1000.) th.push_back(t);
+	double N_frames = argv.get<double>("frames");
+	for (double t = 0; t <= 4*M_PI; t += 4*M_PI/N_frames) th.push_back(t);
 
 	for (unsigned i = 0; i < th.size(); ++i)
 	{	
@@ -308,6 +347,14 @@ void command_coma(int argc_, char **argv_)
 			"include Abell cluster catalog."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
+		Option({0, "v", "velocity", "false",
+			"include velocities."}),
+		Option({Option::VALUED | Option::CHECK, "nf", "frames", "999",
+			"number of frames in the movie."}),
+		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
+			"velocity vector factor."}),
+		Option({Option::VALUED | Option::CHECK, "vw", "vel-width", "1",
+			"velocity vector width."}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", date_string(),
 			"identifier for filenames."}),
 		Option({Option::VALUED | Option::CHECK, "L", "size", "180",
@@ -332,8 +379,8 @@ void command_coma(int argc_, char **argv_)
 	double wall_lim = argv.get<double>("wall-lim");
 	double fila_lim = argv.get<double>("fila-lim");
 
-	std::string fn_i_wall = Misc::format(argv["id"], ".", time_string(t), ".walls.ply");
-	std::string fn_i_fila = Misc::format(argv["id"], ".", time_string(t), ".filam.ply");
+	std::string fn_i_wall = Misc::format(argv["id"], ".walls.", time_string(t), ".ply");
+	std::string fn_i_fila = Misc::format(argv["id"], ".filam.", time_string(t), ".ply");
 
 	std::cerr << "Reading " << fn_i_wall << " ..." << std::endl;
 	auto ply = make_ptr<PLY::PLY>();
@@ -371,6 +418,13 @@ void command_coma(int argc_, char **argv_)
 	else
 		clusters = Nothing;
 
+	std::string fn_i_vel = Misc::format(argv["id"], ".nodes.", time_string(t), ".conan");
+	Maybe<Array<Vertex>> velocities;
+	if (argv.get<bool>("velocity"))
+		velocities = Just(read_velocities(fn_i_vel));
+	else
+		velocities = Nothing;
+
 	// A1367	234.81	 73.03	0.0215 Leo
 	// A1656	 58.09	 87.96	0.0232 Coma
 	TeX label_height; label_height << "lg";
@@ -381,8 +435,9 @@ void command_coma(int argc_, char **argv_)
 	auto wall_material = scale_material(make_wall_material(rv), 100./(2*sqrt(2)));
 	auto filament_material = scale_material(make_filament_material(rv), 100./(2*sqrt(2)));
 	auto galaxy_material = scale_material(make_galaxy_material(rv), 140./(2*sqrt(2)));
+	auto velocity_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), 100./sqrt(2));
 	
-	Coma_filter cf(30, 50);
+	Coma_filter cf(5, 10);
 
 	Array<ptr<RenderObject>> scene;
 	scene.push_back(ptr<RenderObject>(new PolygonObject(
@@ -402,18 +457,23 @@ void command_coma(int argc_, char **argv_)
 	if (clusters)
 	scene.push_back(ptr<RenderObject>(new VertexObject(
 		cf(*clusters), cluster_label)));
+	if (velocities)
+	scene.push_back(ptr<RenderObject>(new VectorObject(
+		cf(*velocities), velocity_material, argv.get<double>("vel-factor"))));
+
 
 	Array<double> th;
-	for (double t = 0; t <= 2*M_PI; t += 2*M_PI/250.) th.push_back(t);
+	double N_frames = argv.get<double>("frames");
+	for (double t = 0; t <= 2*M_PI; t += 2*M_PI/N_frames) th.push_back(t);
 
 	for (unsigned i = 0; i < th.size(); ++i)
 	{	
 		Point p = cf.center();
 		Vector dp(cos(th[i]), sin(th[i]), 0);
-		auto C = make_ptr<Camera>(p + dp * 50, cf.center(), -cf.shub(),
+		auto C = make_ptr<Camera>(p + dp * 10, cf.center(), -cf.shub(),
 			parallel_projection);
 		auto R = Renderer::Image(1920, 1080);
-		R->apply(prepare_context_extract(1920, 1080, 100, rv));
+		R->apply(prepare_context_extract(1920, 1080, 20, rv));
 		R->render(scene, C);
 		R->write_to_png(Misc::format("coma-b-", std::setfill('0'), std::setw(3), i, ".png"));
 		R->finish();

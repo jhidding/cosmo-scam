@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-
 extern std::string date_string();
 extern std::string seconds_since_epoch_string();
 extern std::string time_string(double t);

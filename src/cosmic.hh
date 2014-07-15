@@ -5,6 +5,11 @@
 #include "geometry/geometry.hh"
 #include "render/render.hh"
 
+#include "base/common.hh"
+#include "base/header.hh"
+#include "base/history.hh"
+#include "base/mvector.hh"
+
 namespace Scam
 {
 	extern Array<Vertex>  read_vertices(std::istream &fi, ptr<PLY::PLY> ply, PLY::Format format);
@@ -15,5 +20,6 @@ namespace Scam
 
 	extern std::function<void (Context)> prepare_context(unsigned w, unsigned h, double r);
 	extern std::function<void (Context)> prepare_context_rv(unsigned w, unsigned h, double r);
+	extern Array<Vertex> read_velocities(std::string const &fn_i);
 }
 

@@ -130,6 +130,8 @@ void command_coordinates(int argc_, char **argv_)
 			"include 2Mass into rendering."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
+		Option({0, "lv", "local-void", "false",
+			"point the camera into the local void"}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", "test",
 			"identifier for filenames."}),
 		Option({Option::VALUED | Option::CHECK, "L", "size", "100",
@@ -291,10 +293,21 @@ void command_coordinates(int argc_, char **argv_)
 		return v;
 	};
 
+	Point pointing = (argv.get<bool>("local-void") ?
+		Point(-0.0001,0.0001, 1) :
+		Point(1, 0, 0));
+	Vector shub = (argv.get<bool>("local-void") ?
+		Vector(1, 0, 0) :
+		Vector(0, 0, 1));
+			
 	auto C = make_ptr<Map_projection_camera>(
-		Point(0,0,0), Point(1, 0, 0), Vector(0, 0, 1),
+		Point(0,0,0), pointing, shub,
 		//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
 			Map_projection(Aitoff_Hammer));
+//	auto C = make_ptr<Map_projection_camera>(
+//		Point(0,0,0), Point(1, 0, 0), Vector(0, 0, 1),
+//		//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
+//			Map_projection(Aitoff_Hammer));
 
 	Array<ptr<RenderObject>> scene;
 	Spherical_rotation side = eq_to_sg; //(0,-M_PI/2-0.0001,M_PI);

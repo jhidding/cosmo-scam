@@ -14,6 +14,8 @@
 #include "cosmic.hh"
 #include "materials.hh"
 
+#include "base/mvector.hh"
+
 using namespace System;
 using namespace Scam;
 using namespace TwoMass;
@@ -29,6 +31,14 @@ void command_cosmic(int argc_, char **argv_)
 			"include Abell cluster catalog."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
+		Option({0, "v", "velocity", "false",
+			"include velocities."}),
+		Option({0, "lv", "local-void", "false",
+			"point the camera into the local void"}),
+		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
+			"velocity vector factor."}),
+		Option({Option::VALUED | Option::CHECK, "vw", "vel-width", "1",
+			"velocity vector width."}),
 		Option({Option::VALUED | Option::CHECK, "fof", "haloes", "none",
 			"include Halo catalog."}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", date_string(),
@@ -73,8 +83,8 @@ void command_cosmic(int argc_, char **argv_)
 	double wall_lim = argv.get<double>("wall-lim");
 	double fila_lim = argv.get<double>("fila-lim");
 
-	std::string fn_i_wall = Misc::format(argv["id"], ".", time_string(t), ".walls.ply");
-	std::string fn_i_fila = Misc::format(argv["id"], ".", time_string(t), ".filam.ply");
+	std::string fn_i_wall = Misc::format(argv["id"], ".walls.", time_string(t), ".ply");
+	std::string fn_i_fila = Misc::format(argv["id"], ".filam.", time_string(t), ".ply");
 
 	std::cerr << "Reading " << fn_i_wall << " ..." << std::endl;
 	auto ply = make_ptr<PLY::PLY>();
@@ -130,6 +140,16 @@ void command_cosmic(int argc_, char **argv_)
 	auto filament_material = make_filament_material(rv);
 	auto galaxy_material = make_galaxy_material(rv);
 	auto halo_material = make_halo_material(rv);
+	double vel_width = argv.get<double>("vel-width");
+	double vel_factor = argv.get<double>("vel-factor");
+	auto veloc_material = make_vel_material(rv, vel_width);
+
+	std::string fn_i_vel = Misc::format(argv["id"], ".nodes.", time_string(t), ".conan");
+	Maybe<Array<Vertex>> velocities;
+	if (argv.get<bool>("velocity"))
+		velocities = Just(read_velocities(fn_i_vel));
+	else
+		velocities = Nothing;
 
 	for (double r = 0.0; r + dr < L/2; r += step)
 	{
@@ -140,7 +160,7 @@ void command_cosmic(int argc_, char **argv_)
 		std::cout << "filtering polygons ... radius " << r << "\n";
 		Array<Polygon> filtered_polygons;
 		Array<Vertex>  filtered_galaxies;
-		Array<Vertex>  filtered_haloes;
+		Array<Vertex>  filtered_haloes, filtered_velocities;
 		Array<Segment> filtered_segments;
 		Array<Vertex>  filtered_clusters;
 
@@ -180,7 +200,12 @@ void command_cosmic(int argc_, char **argv_)
 			if ((not S1.is_below(v)) and S2.is_below(v))
 				filtered_haloes.push_back(v);
 		}
-		std::cerr << "including " << filtered_haloes.size() << " haloes\n";
+		if (velocities)
+		for (Vertex const &v : *velocities)
+		{
+			if ((not S1.is_below(v)) and S2.is_below(v))
+				filtered_velocities.push_back(v);
+		}
 
 		for (Segment const &s : segments)
 		{
@@ -210,11 +235,22 @@ void command_cosmic(int argc_, char **argv_)
 		scene.push_back(ptr<RenderObject>(new VertexObject(
 			filtered_haloes, halo_material)));
 
+		if (velocities)
+		scene.push_back(ptr<RenderObject>(new VectorObject(
+			filtered_velocities, veloc_material, vel_factor)));
+
 		scene.push_back(ptr<RenderObject>(new VertexObject(
 			filtered_clusters, cluster_label)));
 		
+		Point pointing = (argv.get<bool>("local-void") ?
+			Point(L/2-0.001, L/2+0.001, L) :
+			Point(L, L/2, L/2));
+		Vector shub = (argv.get<bool>("local-void") ?
+			Vector(1, 0, 0) :
+			Vector(0, 0, 1));
+				
 		auto C = make_ptr<Map_projection_camera>(
-			Point(L/2,L/2,L/2), Point(L, L/2, L/2), Vector(0, 0, 1),
+			Point(L/2,L/2,L/2), pointing, shub,
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
 				Map_projection(Aitoff_Hammer));
 

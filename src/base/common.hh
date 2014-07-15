@@ -4,10 +4,18 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <sstream>
 
 namespace System
 {
 	typedef std::function<void (int, char **)> Command;
+
+	template <typename T>
+	using ptr = std::shared_ptr<T>;
+
+	template <typename T, typename ...Args>
+	ptr<T> make_ptr(Args &&...args)
+	{ return std::make_shared<T>(std::forward<Args>(args)...); }
 
 	template <typename R>
 	auto head(R const &r) -> decltype(*r.begin())
@@ -15,6 +23,66 @@ namespace System
 		return *r.begin();
 	}
 
+	template <typename T>
+	void read_block(std::istream &f, std::vector<T> &v)
+	{
+		uint64_t bs1, bs2;	
+		f.read(reinterpret_cast<char *>(&bs1), sizeof(uint64_t));
+		if (f.fail())
+		{
+			throw "Could not read from file";
+		}
+
+		v.resize(bs1 / sizeof(T));
+		f.read(reinterpret_cast<char *>(v.data()), bs1);
+		f.read(reinterpret_cast<char *>(&bs2), sizeof(uint64_t));
+
+		if (bs1 != bs2)
+			throw "The block seems to be corrupted";
+	}
+
+	template <typename T>
+	void write_block(std::ostream &f, std::vector<T> const &v)
+	{
+		uint64_t byte_size = v.size() * sizeof(T);
+		f.write(reinterpret_cast<char *>(&byte_size), sizeof(uint64_t));
+		f.write(reinterpret_cast<char const *>(v.data()), byte_size);
+		f.write(reinterpret_cast<char *>(&byte_size), sizeof(uint64_t));
+	}
+
+	inline void skip_block(std::istream &f)
+	{
+		uint64_t bs1, bs2;
+
+		f.read(reinterpret_cast<char *>(&bs1), sizeof(uint64_t));
+		if (f.fail())
+		{
+			throw "Could not read from file";
+		}
+
+		f.seekg(bs1, std::ios::cur);
+
+		f.read(reinterpret_cast<char *>(&bs2), sizeof(uint64_t));
+		if (bs1 != bs2)
+			throw "The block seems to be corrupted";
+	}
+
+	template <typename T>
+	T from_string(std::string const &s)
+	{
+		std::istringstream in(s);
+		T value;
+		in >> value;
+		return value;
+	}
+
+	template <typename T>
+	std::string to_string(T const &value)
+	{
+		std::ostringstream out;
+		out << value;
+		return out.str();
+	}
 	template <typename T>
 	class Tail
 	{
@@ -51,14 +119,11 @@ namespace System
 	}
 }
 
+
 namespace Scam
 {
-	template <typename T>
-	using ptr = std::shared_ptr<T>;
-
-	template <typename T, typename ...Args>
-	ptr<T> make_ptr(Args &&...args)
-	{ return std::make_shared<T>(std::forward<Args>(args)...); }
+	using System::ptr;
+	using System::make_ptr;
 
 	template <typename T>
 	class Seq
@@ -117,7 +182,19 @@ namespace Scam
 			Array(std::initializer_list<T> l):
 				Seq<std::vector<T>>(new std::vector<T>(l))
 			{}
+
+			Array(std::istream &in):
+				Seq<std::vector<T>>(new std::vector<T>)
+			{
+				System::read_block(in, *get());
+			}
+
+			void to_file(std::ostream &out)
+			{
+				System::write_block(out, *get());
+			}
 	};
+
 	/*! Maybe monad
 	 */
 	template <typename T>

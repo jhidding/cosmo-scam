@@ -55,6 +55,12 @@ void command_slices(int argc_, char **argv_)
 			"include Abell cluster catalog."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
+		Option({0, "v", "velocity", "false",
+			"include velocities."}),
+		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
+			"velocity vector factor."}),
+		Option({Option::VALUED | Option::CHECK, "vw", "vel-width", "1",
+			"velocity vector width."}),
 		Option({Option::VALUED | Option::CHECK, "fof", "haloes", "none",
 			"include Halo catalog."}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", date_string(),
@@ -130,6 +136,13 @@ void command_slices(int argc_, char **argv_)
 	else
 		haloes = Nothing;
 
+	std::string fn_i_vel = Misc::format(argv["id"], ".nodes.", time_string(t), ".conan");
+	Maybe<Array<Vertex>> velocities;
+	if (argv.get<bool>("velocity"))
+		velocities = Just(read_velocities(fn_i_vel));
+	else
+		velocities = Nothing;
+
 	double step = argv.get<double>("rstep");
 	double dr = argv.get<double>("dr");
 
@@ -142,6 +155,8 @@ void command_slices(int argc_, char **argv_)
 	auto filament_material = make_filament_material(rv);
 	auto galaxy_material = scale_material(make_galaxy_material(rv), L/(2*sqrt(2)));
 	auto halo_material = make_halo_material(rv);
+	auto vel_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), 
+		L/(2*sqrt(2)));
 	
 	std::vector<double> slices;
 	for (double r = 0.0; r+dr <=L; r +=step) slices.push_back(r);
@@ -185,6 +200,7 @@ void command_slices(int argc_, char **argv_)
 		Array<Vertex>  filtered_haloes;
 		Array<Segment> filtered_segments;
 		Array<Vertex>  filtered_clusters;
+		Array<Vertex>  filtered_velocities;
 
 		if (clusters)
 		for (Vertex const &c : *clusters)
@@ -221,7 +237,12 @@ void command_slices(int argc_, char **argv_)
 			if ((not P1.is_below(v)) and P2.is_below(v))
 				filtered_haloes.push_back(v);
 		}
-		std::cerr << "including " << filtered_haloes.size() << " haloes\n";
+		if (velocities)
+		for (Vertex const &v : *velocities)
+		{
+			if ((not P1.is_below(v)) and P2.is_below(v))
+				filtered_velocities.push_back(v);
+		}
 
 		for (Segment const &s : segments)
 		{
@@ -250,6 +271,10 @@ void command_slices(int argc_, char **argv_)
 		if (haloes)
 		scene.push_back(ptr<RenderObject>(new VertexObject(
 			filtered_haloes, halo_material)));
+
+		if (velocities)
+		scene.push_back(ptr<RenderObject>(new VectorObject(
+			filtered_velocities, vel_material, argv.get<double>("vel-factor"))));
 
 		scene.push_back(ptr<RenderObject>(new VertexObject(
 			filtered_clusters, cluster_label)));

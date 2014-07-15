@@ -11,6 +11,7 @@
 #include "tex/tex.hh"
 #include "cosmic.hh"
 
+using namespace System;
 using namespace Scam;
 using namespace TwoMass;
 
@@ -124,6 +125,17 @@ Array<Vertex> Scam::read_abell(std::string const &fn, bool dist, bool rv)
 	return A;
 }
 
+template <unsigned R>
+using dVector = Scam::mVector<double, R>;
+
+template <unsigned R>
+struct VelocityInfo
+{
+	dVector<R> x, v;
+	double     mass;
+	int	   type;
+};
+
 Array<Vertex> Scam::read_haloes(std::string const &fn)
 {
 	Array<Vertex> A;
@@ -137,5 +149,51 @@ Array<Vertex> Scam::read_haloes(std::string const &fn)
 		A.push_back(v);
 	}
 	return A;
+}
+
+template <typename T>
+Scam::Array<T> load_from_file(std::istream &fi, std::string const &name)
+{
+	auto pos = fi.tellg();
+
+	while (fi.good())
+	{
+		Header S(fi);
+		if (S["name"] != name)
+		{
+			skip_block(fi);
+		}
+		else
+		{
+			Array<T> data(fi);
+			fi.seekg(pos, std::ios::beg);
+			return data;
+		}
+	}
+
+	throw "Couldn't find record " + name + " in file.";
+}
+
+extern Scam::Array<Vertex> read_velocities(std::string const &fn_i);
+
+Array<Vertex> Scam::read_velocities(std::string const &fn_i)
+{
+	std::ifstream fi(fn_i);
+	Header H(fi); History I(fi);
+
+	auto P = load_from_file<VelocityInfo<3>>(fi, "nodes");
+
+	Array<Vertex> V;
+	for (VelocityInfo<3> const &p : P)
+	{
+		Vertex v(p.x[0], p.x[1], p.x[2]);
+		v.set_info("vx", p.v[0]);
+		v.set_info("vy", p.v[1]);
+		v.set_info("vz", p.v[2]);
+		v.set_info("mass", p.mass);
+		V->push_back(v);
+	}
+
+	return V;
 }
 

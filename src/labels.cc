@@ -184,3 +184,46 @@ Material Scam::make_halo_material(bool rv)
 		cx->stroke();
 	};
 }
+
+Material Scam::make_vel_material(bool rv, double w)
+{
+	return [rv, w] (Info info, Context cx)
+	{
+		auto m_ = info.get<double>("mass");
+		auto vx_ = info.get<double>("ux");
+		auto vy_ = info.get<double>("uy");
+		auto vz_ = info.get<double>("uz");
+
+		double m = 1.0; if (m_) m = *m_;
+		double s = sqrt(m) * w;
+
+		double vx = *vx_, vy = *vy_, vz = *vz_;
+
+		// we have a circle of radius r, and put a cone on it
+		// out to radius R > r, what is the angle upto which to draw
+		// the arc of the circle? r**2 + (tan(th)*r)**2 = R**2
+		// 1 + tan(th) = (R/r)**2 -> th = atan((R/r)**2 - 1)
+
+		double r = 0.01*s;
+		double R = sqrt(vx*vx + vy*vy);
+		double phi = atan2(vy, vx);
+		double theta = (R > r ? atan((R*R)/(r*r) - 1) : 0);
+
+		double x, y;
+		cx->get_current_point(x, y);
+		cx->begin_new_path();
+		cx->arc(x, y, r, phi + theta, phi - theta);
+		cx->line_to(x + vx, y + vy);
+		cx->close_path();
+
+		if (rv) cx->set_source_rgba(0.6,0.6,0.95,0.2);
+		else cx->set_source_rgba(0,0,0,0.5);
+		cx->fill_preserve();
+
+		if (rv) cx->set_source_rgba(0,0,0,0.2);
+		else cx->set_source_rgba(1,1,1,0.5);
+		cx->set_line_width(0.001);
+		cx->stroke();
+	};
+}
+

@@ -80,6 +80,12 @@ namespace Scam
 			virtual Vector operator()(Vector const &v) const { return R(v); }
 			virtual Plane operator()(Plane const &p) const { return Plane(P(R(T(p.origin()))), R(p.normal())); }
 
+			virtual std::pair<Point, Vector> operator()(Point const &p, Vector const &v)
+			{
+				Point a = P(R(T(p)));
+				return std::pair<Point, Vector>(a, P(R(T(p+v)))-a);
+			}
+
 			virtual Array<Path> operator()(Polygon const &Q) const
 			{
 				Path A(true);

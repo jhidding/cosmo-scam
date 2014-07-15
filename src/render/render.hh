@@ -83,6 +83,38 @@ namespace Scam
 			}
 	};
 
+	class VectorObject: public RenderObject
+	{
+		Array<Vertex>	V;
+		Material	M;
+		double		factor;
+
+		public:
+			VectorObject(Array<Vertex> V_, Material const &M_, double factor_):
+				V(V_), M(M_), factor(factor_) {}
+
+			Array<Drawable> operator()(ptr<Camera> C) const
+			{
+				Array<Drawable> A;
+				for (Vertex const &v : V)
+				{
+					double vx = *v.get_info<double>("vx");
+					double vy = *v.get_info<double>("vy");
+					double vz = *v.get_info<double>("vz");
+
+					auto P = (*C)(v, Vector(vx, vy, vz) * factor); 
+					Path G(false); G.push_back(P.first);
+
+					Info i = v.info();
+					i.set("ux", P.second.x());
+					i.set("uy", P.second.y());
+					i.set("uz", P.second.z());
+					A.push_back(Drawable(G, i, M));
+				}
+				return A;
+			}
+	};
+
 	class SegmentObject: public RenderObject
 	{
 		Array<Segment>	S;
