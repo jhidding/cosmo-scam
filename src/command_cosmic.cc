@@ -20,6 +20,17 @@ using namespace System;
 using namespace Scam;
 using namespace TwoMass;
 
+inline Material scale_material(Material M, double scale)
+{
+	return [M, scale] (Info info, Context cx)
+	{
+		cx->save();
+		cx->scale(scale, scale);
+		M(info, cx);
+		cx->restore();
+	};
+}
+
 void command_cosmic(int argc_, char **argv_)
 {
 	Argv argv = read_arguments(argc_, argv_,
@@ -35,6 +46,12 @@ void command_cosmic(int argc_, char **argv_)
 			"include velocities."}),
 		Option({0, "lv", "local-void", "false",
 			"point the camera into the local void"}),
+		Option({0, "norma", "norma", "false",
+			"point the camera to Norma"}),
+		Option({Option::VALUED | Option::CHECK, "rx", "resx", "1920",
+			"image size X"}),
+		Option({Option::VALUED | Option::CHECK, "ry", "resy", "1080",
+			"image size Y"}),
 		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
 			"velocity vector factor."}),
 		Option({Option::VALUED | Option::CHECK, "vw", "vel-width", "1",
@@ -135,7 +152,7 @@ void command_cosmic(int argc_, char **argv_)
 	double sh = svg_height_->height();
 
 	bool rv = argv.get<bool>("reverse");
-	auto cluster_label = make_cluster_label_material(rv);
+	auto cluster_label = scale_material(make_cluster_label_material(rv), 1.5);
 	auto wall_material = make_wall_material(rv);
 	auto filament_material = make_filament_material(rv);
 	auto galaxy_material = make_galaxy_material(rv);
@@ -242,9 +259,14 @@ void command_cosmic(int argc_, char **argv_)
 		scene.push_back(ptr<RenderObject>(new VertexObject(
 			filtered_clusters, cluster_label)));
 		
-		Point pointing = (argv.get<bool>("local-void") ?
-			Point(L/2-0.001, L/2+0.001, L) :
-			Point(L, L/2, L/2));
+		Point pointing;
+		if (argv.get<bool>("local-void"))
+			pointing = Point(L/2-0.001, L/2+0.001, L);
+		else if (argv.get<bool>("norma"))
+			pointing = Point(-L, L/2, L/2);
+		else
+			pointing = Point(L, L/2, L/2);
+
 		Vector shub = (argv.get<bool>("local-void") ?
 			Vector(1, 0, 0) :
 			Vector(0, 0, 1));
@@ -254,11 +276,13 @@ void command_cosmic(int argc_, char **argv_)
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
 				Map_projection(Aitoff_Hammer));
 
-		auto R = Renderer::Image(1920, 1080);
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
 		if (argv.get<bool>("reverse"))
-			R->apply(prepare_context_rv(1920, 1080, r+dr/2));
+			R->apply(prepare_context_rv(rx, ry, r+dr/2));
 		else
-			R->apply(prepare_context(1920, 1080, r+dr/2));
+			R->apply(prepare_context(rx, ry, r+dr/2));
 
 		R->render(scene, C);
 		R->write_to_png(fn_output_png);

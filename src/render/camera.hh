@@ -111,5 +111,12 @@ namespace Scam
 	{
 		return Point(v.x(), v.y(), v.z());
 	}
+
+	inline Camera::Projection scaled_parallel_projection(double s)
+	{
+		return [s] (Vector const &v) {
+			return Point(v.x()*s, v.y()*s, v.z()*s);
+		};
+	}
 }
 

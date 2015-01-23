@@ -14,6 +14,7 @@
 #include "cosmic.hh"
 #include "materials.hh"
 #include "coma_filter.hh"
+#include "make_coords.hh"
 
 #include <iomanip>
 
@@ -209,6 +210,16 @@ void command_perseus(int argc_, char **argv_)
 			"reverse colours."}),
 		Option({0, "v", "velocity", "false",
 			"include velocities."}),
+
+		Option({0, "sky", "sky", "false",
+			"sky plot"}),
+		Option({0, "side", "side", "false",
+			"side plot"}),
+
+		Option({Option::VALUED | Option::CHECK, "rx", "resx", "1920",
+			"image size X"}),
+		Option({Option::VALUED | Option::CHECK, "ry", "resy", "1080",
+			"image size Y"}),
 		Option({Option::VALUED | Option::CHECK, "nf", "frames", "999",
 			"number of frames in the movie."}),
 		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
@@ -292,10 +303,10 @@ void command_perseus(int argc_, char **argv_)
 	double sh = svg_height_->height();
 
 	double rad = 30;
-	auto cluster_label = scale_material(make_cluster_label_material(rv), rad/(sqrt(2)));
-	auto wall_material = scale_material(make_wall_material(rv), rad/(sqrt(2)));
-	auto filament_material = scale_material(make_filament_material(rv), rad/(sqrt(2)));
-	auto galaxy_material = scale_material(make_galaxy_material(rv), rad*1.5/(sqrt(2)));
+	auto cluster_label = make_cluster_label_material(rv);
+	auto wall_material = make_wall_material(rv);
+	auto filament_material = make_filament_material(rv);
+	auto galaxy_material = make_galaxy_material(rv);
 	auto velocity_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), rad/(sqrt(2)));
 	Perseus_filter cf(rad);
 
@@ -304,13 +315,13 @@ void command_perseus(int argc_, char **argv_)
 		cf(polygons), wall_material)));
 	scene.push_back(ptr<RenderObject>(new SegmentObject(
 		cf(segments), filament_material)));
-	scene.push_back(ptr<RenderObject>(new SegmentObject(
+	/*scene.push_back(ptr<RenderObject>(new SegmentObject(
 		cf.fog(), [] (Info info, Context cx)
 	{
 		cx->set_line_width(0.1);
 		cx->set_source_rgb(0.5,0.7,1.0);
 		cx->stroke();
-	})));
+	})));*/
 	if (galaxies)
 	scene.push_back(ptr<RenderObject>(new VertexObject(
 		cf(*galaxies), galaxy_material)));
@@ -321,18 +332,132 @@ void command_perseus(int argc_, char **argv_)
 	scene.push_back(ptr<RenderObject>(new VectorObject(
 		cf(*velocities), velocity_material, argv.get<double>("vel-factor"))));
 
+	if (argv.get<bool>("sky"))
+	{
+		Spherical_rotation side = eq_to_sg; //(0,-M_PI/2-0.0001,M_PI);
+		Spherical_rotation sph_id(0, M_PI/2-1e-5, 0);
+
+		/* add coordinate lines */
+		add_coordinates(scene, side);
+		scene.push_back(ptr<RenderObject>(new SegmentObject(
+			make_parallel(side*ga_to_eq, 5, 1e5), [] (Info info, Context cx)
+		{
+					cx->set_source_rgb(0.5, 0.5, 0.5);
+					cx->set_line_width(0.002);
+					cx->stroke();
+		})));
+		scene.push_back(ptr<RenderObject>(new SegmentObject(
+			make_parallel(side*ga_to_eq, -5, 1e5), [] (Info info, Context cx)
+		{
+					cx->set_source_rgb(0.5, 0.5, 0.5);
+					cx->set_line_width(0.002);
+					cx->stroke();
+		})));
+
+		Point pointing = cf.center();
+		Vector shub = Vector(0, 0, 1);
+				
+		auto C = make_ptr<Map_projection_camera>(
+			Point(L/2,L/2,L/2), pointing, shub,
+			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
+				Map_projection(Aitoff_Hammer));
+
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
+		R->apply([rx, ry] (Context cx)
+		{
+			cx->scale(ry*0.5, ry*0.5);
+			cx->translate(1.0, 1.0);
+		});
+		R->render(scene, C);
+		R->write_to_png("pp-sky.png");
+		R->finish();
+		return;
+	}
+
+	if (argv.get<bool>("side"))
+	{
+		// z
+		Point pointing = cf.center();
+		{		
+		auto C = make_ptr<Camera>(
+			pointing + Vector(0.001, -0.001, L), pointing, -(pointing - Point(L/2, L/2, L/2)),
+			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
+				scaled_parallel_projection(0.03));
+
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
+		R->apply([rx, ry] (Context cx)
+		{
+			cx->scale(ry*0.5, ry*0.5);
+			cx->translate(1.0, 1.0);
+			cx->set_line_join(Cairo::LINE_JOIN_ROUND);
+		});
+		R->render(scene, C);
+		R->write_to_png("pp-z.png");
+		R->finish();
+		}
+
+		//y
+		{		
+		auto C = make_ptr<Camera>(
+			pointing + Vector(0.001, L, 0.001), pointing, -(pointing - Point(L/2, L/2, L/2)),
+			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
+				scaled_parallel_projection(0.03));
+
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
+		R->apply([rx, ry] (Context cx)
+		{
+			cx->scale(ry*0.5, ry*0.5);
+			cx->translate(1.0, 1.0);
+			cx->set_line_join(Cairo::LINE_JOIN_ROUND);
+		});
+		R->render(scene, C);
+		R->write_to_png("pp-y.png");
+		R->finish();
+		}
+
+		//xyz
+		{		
+		auto C = make_ptr<Camera>(
+			pointing + Vector(L, L, L), pointing, -(pointing - Point(L/2, L/2, L/2)),
+			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
+				scaled_parallel_projection(0.03));
+
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
+		R->apply([rx, ry] (Context cx)
+		{
+			cx->scale(ry*0.5, ry*0.5);
+			cx->translate(1.0, 1.0);
+			cx->set_line_join(Cairo::LINE_JOIN_ROUND);
+		});
+		R->render(scene, C);
+		R->write_to_png("pp-xyz.png");
+		R->finish();
+		}
+		return;
+	}
+
 	Array<double> th;
 	double N_frames = argv.get<double>("frames");
 	for (double t = 0; t <= 4*M_PI; t += 4*M_PI/N_frames) th.push_back(t);
 
+	unsigned rx = argv.get<unsigned>("resx"),
+		 ry = argv.get<unsigned>("resy");
 	for (unsigned i = 0; i < th.size(); ++i)
 	{	
 		Point p = cf.center();
 		Vector dp(cos(th[i]), sin(th[i]), sin(3./2*th[i]));
 		auto C = make_ptr<Camera>(p + dp * 50, cf.center(), Vector(0,0,1),
-			parallel_projection);
-		auto R = Renderer::Image(1920, 1080);
-		R->apply(prepare_context_extract(1920, 1080, rad*2, rv));
+			scaled_parallel_projection(0.015));
+		auto R = Renderer::Image(rx, ry);
+		R->apply(prepare_context_extract(rx, ry, rad*2, rv));
 		R->render(scene, C);
 		R->write_to_png(Misc::format("perseus-b-", std::setfill('0'), std::setw(3), i, ".png"));
 		R->finish();
@@ -352,6 +477,14 @@ void command_coma(int argc_, char **argv_)
 			"reverse colours."}),
 		Option({0, "v", "velocity", "false",
 			"include velocities."}),
+		Option({0, "sky", "sky", "false",
+			"sky plot"}),
+		Option({0, "side", "side", "false",
+			"side plot"}),
+		Option({Option::VALUED | Option::CHECK, "rx", "resx", "1920",
+			"image size X"}),
+		Option({Option::VALUED | Option::CHECK, "ry", "resy", "1080",
+			"image size Y"}),
 		Option({Option::VALUED | Option::CHECK, "nf", "frames", "999",
 			"number of frames in the movie."}),
 		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
@@ -434,26 +567,26 @@ void command_coma(int argc_, char **argv_)
 	auto svg_height_ = label_height.svg();
 	double sh = svg_height_->height();
 
-	auto cluster_label = scale_material(make_cluster_label_material(rv), 100./(2*sqrt(2)));
-	auto wall_material = scale_material(make_wall_material(rv), 100./(2*sqrt(2)));
-	auto filament_material = scale_material(make_filament_material(rv), 100./(2*sqrt(2)));
-	auto galaxy_material = scale_material(make_galaxy_material(rv), 140./(2*sqrt(2)));
+	auto cluster_label = scale_material(make_cluster_label_material(rv), 0.7);
+	auto wall_material = make_wall_material(rv);
+	auto filament_material = scale_material(make_filament_material(rv), 0.7);
+	auto galaxy_material = make_galaxy_material(rv);
 	auto velocity_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), 100./sqrt(2));
 	
-	Coma_filter cf(5, 10);
+	Coma_filter cf(15, 50);
 
 	Array<ptr<RenderObject>> scene;
 	scene.push_back(ptr<RenderObject>(new PolygonObject(
 		cf(polygons), wall_material)));
 	scene.push_back(ptr<RenderObject>(new SegmentObject(
 		cf(segments), filament_material)));
-	scene.push_back(ptr<RenderObject>(new SegmentObject(
+	/*scene.push_back(ptr<RenderObject>(new SegmentObject(
 		cf.fog(), [] (Info info, Context cx)
 	{
 		cx->set_line_width(0.1);
 		cx->set_source_rgb(0.5,0.7,1.0);
 		cx->stroke();
-	})));
+	})));*/
 	if (galaxies)
 	scene.push_back(ptr<RenderObject>(new VertexObject(
 		cf(*galaxies), galaxy_material)));
@@ -464,6 +597,80 @@ void command_coma(int argc_, char **argv_)
 	scene.push_back(ptr<RenderObject>(new VectorObject(
 		cf(*velocities), velocity_material, argv.get<double>("vel-factor"))));
 
+	if (argv.get<bool>("sky"))
+	{
+		Spherical_rotation side = eq_to_sg; //(0,-M_PI/2-0.0001,M_PI);
+		Spherical_rotation sph_id(0, M_PI/2-1e-5, 0);
+
+		/* add coordinate lines */
+		add_coordinates(scene, side);
+		scene.push_back(ptr<RenderObject>(new SegmentObject(
+			make_parallel(side*ga_to_eq, 5, 1e5), [] (Info info, Context cx)
+		{
+					cx->set_source_rgb(0.5, 0.5, 0.5);
+					cx->set_line_width(0.002);
+					cx->stroke();
+		})));
+		scene.push_back(ptr<RenderObject>(new SegmentObject(
+			make_parallel(side*ga_to_eq, -5, 1e5), [] (Info info, Context cx)
+		{
+					cx->set_source_rgb(0.5, 0.5, 0.5);
+					cx->set_line_width(0.002);
+					cx->stroke();
+		})));
+
+		Point pointing = Point(L/2, L, L/2);
+		Vector shub = Vector(0, 0, 1);
+				
+		auto C = make_ptr<Map_projection_camera>(
+			Point(L/2,L/2,L/2), pointing, shub,
+			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
+				Map_projection(Aitoff_Hammer));
+
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
+		R->apply([rx, ry] (Context cx)
+		{
+			cx->scale(ry*0.5, ry*0.5);
+			cx->translate(1.0, 1.0);
+		});
+		R->render(scene, C);
+		R->write_to_png("coma-test.png");
+		R->finish();
+		return;
+	}
+
+	if (argv.get<bool>("side"))
+	{
+		Spherical_rotation side = eq_to_sg; //(0,-M_PI/2-0.0001,M_PI);
+		Spherical_rotation sph_id(0, M_PI/2-1e-5, 0);
+
+		Point pointing = Point(L/2, L, L/2);
+		Vector shub = Vector(0, 0, 1);
+		
+		Vector dist = cf.center() - Point(L/2, L/2, L/2);
+		Vector offset = Vector::cross(cf.normal(), cf.shub()).normalize();
+		Point origin = cf.center() + offset.scale(dist.norm());
+		auto C = make_ptr<Camera>(
+			origin, cf.center(), -cf.shub(),
+			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
+				scaled_parallel_projection(0.015));
+
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
+		R->apply([rx, ry] (Context cx)
+		{
+			cx->scale(ry*0.5, ry*0.5);
+			cx->translate(1.0, 1.0);
+			cx->set_line_join(Cairo::LINE_JOIN_ROUND);
+		});
+		R->render(scene, C);
+		R->write_to_png("coma-side.png");
+		R->finish();
+		return;
+	}
 
 	Array<double> th;
 	double N_frames = argv.get<double>("frames");

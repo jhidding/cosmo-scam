@@ -23,12 +23,13 @@ std::function<void (Context)> prepare_context_slice(int w, int h, double L, bool
 	return [w,h,L,rv] (Context cx)
 	{
 		cx->translate(w/2, h/2);
-		cx->scale(h/(1.1*L), h/(1.1*L));
+		cx->scale(h/(0.55*L), h/(0.55*L));
 		//cx->translate(-L/2, -L/2);
-		cx->rectangle(-L/2,-L/2, L,L);
+		cx->rectangle(-L/4,-L/4, L/2,L/2);
 		if (rv) cx->set_source_rgba(1,1,1,0.5);
 		else cx->set_source_rgba(0,0,0,0.5);
 		cx->set_line_width(1);
+		cx->set_line_cap(Cairo::LINE_CAP_ROUND);
 		cx->stroke();
 	};
 }
@@ -57,6 +58,13 @@ void command_slices(int argc_, char **argv_)
 			"reverse colours."}),
 		Option({0, "v", "velocity", "false",
 			"include velocities."}),
+		Option({0, "ss", "subsel", "false",
+			"only render a small (preprogrammed) subselection."}),
+
+		Option({Option::VALUED | Option::CHECK, "rx", "resx", "1920",
+			"image size X"}),
+		Option({Option::VALUED | Option::CHECK, "ry", "resy", "1080",
+			"image size Y"}),
 		Option({Option::VALUED | Option::CHECK, "vf", "vel-factor", "0.01",
 			"velocity vector factor."}),
 		Option({Option::VALUED | Option::CHECK, "vw", "vel-width", "1",
@@ -150,16 +158,16 @@ void command_slices(int argc_, char **argv_)
 	auto svg_height_ = label_height.svg();
 	double sh = svg_height_->height();
 
-	auto cluster_label = scale_material(make_cluster_label_material(rv), L/(2*sqrt(2)));
+	auto cluster_label = scale_material(make_cluster_label_material(rv), L/2.5);
 	auto wall_material = make_wall_material(rv);
-	auto filament_material = make_filament_material(rv);
-	auto galaxy_material = scale_material(make_galaxy_material(rv), L/(2*sqrt(2)));
+	auto filament_material = scale_material(make_filament_material(rv), L/(4*sqrt(2)));
+	auto galaxy_material = scale_material(make_galaxy_material(rv), L/(4*sqrt(2)));
 	auto halo_material = make_halo_material(rv);
 	auto vel_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), 
 		L/(2*sqrt(2)));
 	
 	std::vector<double> slices;
-	for (double r = 0.0; r+dr <=L; r +=step) slices.push_back(r);
+	for (double r = L/4; r+dr <= (3*L/4); r +=step) slices.push_back(r);
 		
 	for (unsigned k = 0; k < 3; ++k) {
 	//#pragma omp parallel for
@@ -193,6 +201,8 @@ void command_slices(int argc_, char **argv_)
 				break;
 		}
 
+		Cuboid SelC(Point(L/4, L/4, L/4), Point(3*L/4, 3*L/4, 3*L/4));
+
 		std::cout << "filtering polygons slice x_" << k << " = " << r << "\n";
 
 		Array<Polygon> filtered_polygons;
@@ -205,8 +215,9 @@ void command_slices(int argc_, char **argv_)
 		if (clusters)
 		for (Vertex const &c : *clusters)
 		{
-			auto r_ = c.get_info<double>("r");
-			double cr = 0.0; if (r_) cr = *r_;
+			if (not SelC.is_below(c)) continue;
+			//auto r_ = c.get_info<double>("r");
+			//double cr = 0.0; if (r_) cr = *r_;
 
 			if ((not P1.is_below(c)) and P2.is_below(c))
 				filtered_clusters.push_back(c);
@@ -217,7 +228,9 @@ void command_slices(int argc_, char **argv_)
 			auto d = p.get_info<double>("density");
 			if ((not d) or (*d < wall_lim)) continue;
 
-			auto A = P1.split_polygon(p);
+			auto C = SelC.split_polygon(p);
+			if (not C.first) continue;
+			auto A = P1.split_polygon(*C.first);
 			if (not A.second) continue;
 			auto B = P2.split_polygon(*A.second);
 			if (not B.first) continue;
@@ -228,18 +241,21 @@ void command_slices(int argc_, char **argv_)
 		if (galaxies)
 		for (Vertex const &v : *galaxies)
 		{
+			if (not SelC.is_below(v)) continue;
 			if ((not P1.is_below(v)) and P2.is_below(v))
 				filtered_galaxies.push_back(v);
 		}
 		if (haloes)
 		for (Vertex const &v : *haloes)
 		{
+			if (not SelC.is_below(v)) continue;
 			if ((not P1.is_below(v)) and P2.is_below(v))
 				filtered_haloes.push_back(v);
 		}
 		if (velocities)
 		for (Vertex const &v : *velocities)
 		{
+			if (not SelC.is_below(v)) continue;
 			if ((not P1.is_below(v)) and P2.is_below(v))
 				filtered_velocities.push_back(v);
 		}
@@ -248,7 +264,10 @@ void command_slices(int argc_, char **argv_)
 		{
 			auto d = s.get_info<double>("density");
 			if ((not d) or (*d < fila_lim)) continue;
-			auto A = P1.split_segment(s);
+
+			auto C = SelC.split_segment(s);
+			if (not C.first) continue;
+			auto A = P1.split_segment(*C.first);
 			if (not A.second) continue;
 			auto B = P2.split_segment(*A.second);
 			if (not B.first) continue;
@@ -282,8 +301,10 @@ void command_slices(int argc_, char **argv_)
 		auto C = make_ptr<Camera>(cam_pos, cam_tgt, cam_shub,
 			parallel_projection);
 
-		auto R = Renderer::Image(1920, 1080);
-		R->apply(prepare_context_slice(1920, 1080, argv.get<double>("size"), rv));
+		unsigned rx = argv.get<unsigned>("resx"),
+			 ry = argv.get<unsigned>("resy");
+		auto R = Renderer::Image(rx, ry);
+		R->apply(prepare_context_slice(rx, ry, argv.get<double>("size"), rv));
 
 		R->render(scene, C);
 		R->write_to_png(fn_output_png);

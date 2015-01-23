@@ -82,5 +82,26 @@ namespace Scam
 			double distance(Point const &p) const;
 			Maybe<Point> intersect(Point const &a, Point const &b) const;
 	};
+
+	class Cuboid: public Surface
+	{
+		Plane m_bounds[6];
+
+		public:
+			Cuboid() {}
+
+			Cuboid(Point a, Point b)
+			{
+				m_bounds[0] = Plane(a, Vector(-1,  0,  0));
+				m_bounds[1] = Plane(a, Vector( 0, -1,  0));
+				m_bounds[2] = Plane(a, Vector( 0,  0, -1));
+				m_bounds[3] = Plane(b, Vector( 1,  0,  0));
+				m_bounds[4] = Plane(b, Vector( 0,  1,  0));
+				m_bounds[5] = Plane(b, Vector( 0,  0,  1));
+			}
+
+			double distance(Point const &p) const;
+			Maybe<Point> intersect(Point const &a, Point const &b) const;
+	};
 }
 

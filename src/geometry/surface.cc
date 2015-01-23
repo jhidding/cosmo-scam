@@ -17,6 +17,42 @@ Maybe<Point> Plane::intersect(Point const &a, Point const &b) const
 	return Just(a + v*t);
 }
 
+double Cuboid::distance(Point const &p) const
+{
+	double d[6];
+	for (unsigned i = 0; i < 6; ++i)
+		d[i] = m_bounds[i].distance(p);
+
+	return *std::max_element(d, d+6);
+}
+
+Maybe<Point> Cuboid::intersect(Point const &a, Point const &b) const
+{
+	double da = distance(a),
+	       db = distance(b);
+	
+	if (da*db >= 0.0) return Nothing;
+
+	Maybe<Point> q = Nothing;
+	double dist;
+
+	for (unsigned i = 0; i < 6; ++i)
+	{
+		auto p0 = m_bounds[i].intersect(a, b);
+		if (p0)
+		{
+			double c = distance(*p0);
+			if ((not q) or (c < dist))
+			{
+				q = p0;
+				dist = c;
+			}
+		}
+	}
+
+	return q;
+}
+
 double Sphere::distance(Point const &p) const
 {
 	return (p - m_origin).norm() - m_radius;

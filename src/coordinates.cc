@@ -9,6 +9,7 @@
 #include "two_mass.hh"
 #include "material/colour.hh"
 #include "tex/tex.hh"
+#include "make_coords.hh"
 
 using namespace Scam;
 using namespace TwoMass;
@@ -57,70 +58,6 @@ std::function<void (Context)> prepare_context_rv(unsigned w, unsigned h)
 	};
 }
 
-Array<Segment> make_meridian(Spherical_rotation const &sph, double longitude, double r = 1e6)
-{
-	Array<Segment> A;
-	Point O(0,0,0);
-	for (int lattitude = -90; lattitude < 90; lattitude += 2)
-	{
-		double l1, b1; sph(radians(longitude), radians(lattitude), l1, b1);
-		double l2, b2; sph(radians(longitude), radians(lattitude+2), l2, b2);
-		Point p = O + spherical_to_cartesian(l1, b1, r),
-		      q = O + spherical_to_cartesian(l2, b2, r);
-		A.push_back(Segment(p, q));
-	}
-	return A;
-}
-
-Array<Segment> make_parallel(Spherical_rotation const &sph, double lattitude, double r = 1e6)
-{
-	Array<Segment> A;
-	Point O(0,0,0);
-	for (int longitude = -180; longitude < 180; longitude += 2)
-	{
-		double l1, b1; sph(radians(longitude), radians(lattitude), l1, b1);
-		double l2, b2; sph(radians(longitude+2), radians(lattitude), l2, b2);
-		Point p = O + spherical_to_cartesian(l1, b1, r),
-		      q = O + spherical_to_cartesian(l2, b2, r);
-		A.push_back(Segment(p, q));
-	}
-	return A;
-}
-
-void add_coordinates(Array<ptr<RenderObject>> scene, Spherical_rotation const &sph)
-{
-	for (int b = -75; b <= 75; b += 15)
-	{
-		if (b==0)
-		scene.push_back(ptr<RenderObject>(new SegmentObject(
-			make_parallel(sph, b), [] (Info info, Context cx)
-			{
-				cx->set_source_rgb(0.5, 0.5, 0.5);
-				cx->set_line_width(0.01);
-				cx->stroke();
-			})));
-		else
-		scene.push_back(ptr<RenderObject>(new SegmentObject(
-			make_parallel(sph, b), [] (Info info, Context cx)
-			{
-				cx->set_source_rgb(0.5, 0.5, 0.5);
-				cx->set_line_width(0.005);
-				cx->stroke();
-			})));
-	}
-
-	for (int l = -180; l < 180; l += 15)
-	{
-		scene.push_back(ptr<RenderObject>(new SegmentObject(
-			make_meridian(sph, l), [] (Info info, Context cx)
-			{
-				cx->set_source_rgb(0.5, 0.5, 0.5);
-				cx->set_line_width(0.005);
-				cx->stroke();
-			})));
-	}
-}
-
 void command_coordinates(int argc_, char **argv_)
 {
 	System::Argv argv = System::read_arguments(argc_, argv_,
@@ -132,6 +69,14 @@ void command_coordinates(int argc_, char **argv_)
 			"reverse colours."}),
 		Option({0, "lv", "local-void", "false",
 			"point the camera into the local void"}),
+		Option({0, "norma", "norma", "false",
+			"point the camera to Norma"}),
+		Option({0, "svg", "svg", "false",
+			"produce SVG output"}),
+		Option({Option::VALUED | Option::CHECK, "rx", "resx", "1920",
+			"image size X"}),
+		Option({Option::VALUED | Option::CHECK, "ry", "resy", "1080",
+			"image size Y"}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", "test",
 			"identifier for filenames."}),
 		Option({Option::VALUED | Option::CHECK, "L", "size", "100",
@@ -293,9 +238,13 @@ void command_coordinates(int argc_, char **argv_)
 		return v;
 	};
 
-	Point pointing = (argv.get<bool>("local-void") ?
-		Point(-0.0001,0.0001, 1) :
-		Point(1, 0, 0));
+	Point pointing;
+	if (argv.get<bool>("local-void"))
+		pointing = Point(-0.0001,0.0001, 1);
+	else if (argv.get<bool>("norma"))
+		pointing = Point(-1, 0, 0);
+	else
+		pointing = Point(1, 0, 0);
 	Vector shub = (argv.get<bool>("local-void") ?
 		Vector(1, 0, 0) :
 		Vector(0, 0, 1));
@@ -359,11 +308,24 @@ void command_coordinates(int argc_, char **argv_)
 
 	/* draw the thing */
 	std::string fn_output_png = Misc::format(argv["id"], ".png");
-	auto R = Renderer::Image(1920, 1080);
-	if (argv.get<bool>("reverse"))
-		R->apply(prepare_context_rv(1920, 1080));
+	std::string fn_output_svg = Misc::format(argv["id"], ".svg");
+	unsigned rx = argv.get<unsigned>("resx"),
+		 ry = argv.get<unsigned>("resy");
+
+	ptr<Renderer> R;
+	if (argv.get<bool>("svg"))
+	{
+		R = Renderer::SVG(rx, ry, fn_output_svg);
+	}
 	else
-		R->apply(prepare_context(1920, 1080));
+	{
+		R = Renderer::Image(rx, ry);
+	}
+
+	if (argv.get<bool>("reverse"))
+		R->apply(prepare_context_rv(rx, ry));
+	else
+		R->apply(prepare_context(rx, ry));
 	R->render(scene, C);
 /*	R->apply([] (Context cx)
 	{

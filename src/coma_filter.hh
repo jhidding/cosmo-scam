@@ -177,7 +177,7 @@ namespace Scam
 
 		Plane 	P, Top, Bottom;
 		Sphere 	S;
-		Vector  hub;
+		Vector  hub, m_normal;
 		Array<Segment> fogs;
 
 		public:                 
@@ -198,6 +198,7 @@ namespace Scam
 				S = Sphere(P.origin(), radius);
 
 				hub = A1367 - A1656;
+				m_normal = P.normal();
 				Point Earth(90,90,90);
 
 				Vector  v = (A1656 - Earth).normalize(),
@@ -211,6 +212,7 @@ namespace Scam
 
 			Point center() const { return P.origin(); }
 			Vector shub() const { return hub; } 
+			Vector normal() const { return m_normal; }
 			Array<Segment> fog() const { return fogs; }
 
 			Array<Vertex> operator()(Array<Vertex> A) const

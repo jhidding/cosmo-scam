@@ -51,7 +51,7 @@ Material Scam::make_cluster_label_material(bool rv)
 
 		if (not rv)
 		{
-			cx->set_source_rgba(1,0.5,0,0.5);
+			cx->set_source_rgba(1,0.5,0,0.7);
 			cx->fill_preserve();
 			cx->set_source_rgb(1,0.5,0);
 			cx->stroke();
@@ -114,7 +114,7 @@ Material Scam::make_filament_material(bool rv)
 
 		if (rv)
 		{
-			cx->set_line_width(0.03 * d);
+			cx->set_line_width(0.023 * d);
 			cx->set_source_rgba(0,0,0,0.5);
 			cx->stroke_preserve();
 			cx->set_line_width(0.02 * d);
@@ -123,7 +123,7 @@ Material Scam::make_filament_material(bool rv)
 		}
 		else 
 		{
-			cx->set_line_width(0.03 * d);
+			cx->set_line_width(0.023 * d);
 			cx->set_source_rgba(1,1,1,0.5);
 			cx->stroke_preserve();
 			cx->set_line_width(0.02 * d);
