@@ -29,6 +29,7 @@ namespace Scam
 			{
 				auto z_values = lazy_map(G, [] (Point const &x) { return x.z(); });
 				z = *std::max_element(z_values.begin(), z_values.end());
+				I.set("z", z);
 			}
 
 			void operator()(Context cx) const

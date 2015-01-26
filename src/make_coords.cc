@@ -5,7 +5,7 @@ using namespace TwoMass;
 Array<Segment> Scam::make_meridian(Spherical_rotation const &sph, double longitude, double r)
 {
 	Array<Segment> A;
-	Point O(0,0,0);
+	Point O(90,90,90);
 	for (int lattitude = -90; lattitude < 90; lattitude += 2)
 	{
 		double l1, b1; sph(radians(longitude), radians(lattitude), l1, b1);
@@ -20,7 +20,7 @@ Array<Segment> Scam::make_meridian(Spherical_rotation const &sph, double longitu
 Array<Segment> Scam::make_parallel(Spherical_rotation const &sph, double lattitude, double r)
 {
 	Array<Segment> A;
-	Point O(0,0,0);
+	Point O(90,90,90);
 	for (int longitude = -180; longitude < 180; longitude += 2)
 	{
 		double l1, b1; sph(radians(longitude), radians(lattitude), l1, b1);
@@ -32,13 +32,13 @@ Array<Segment> Scam::make_parallel(Spherical_rotation const &sph, double lattitu
 	return A;
 }
 
-void Scam::add_coordinates(Array<ptr<RenderObject>> scene, Spherical_rotation const &sph)
+void Scam::add_coordinates(Array<ptr<RenderObject>> scene, Spherical_rotation const &sph, double r)
 {
 	for (int b = -75; b <= 75; b += 15)
 	{
 		if (b==0)
 		scene.push_back(ptr<RenderObject>(new SegmentObject(
-			make_parallel(sph, b), [] (Info info, Context cx)
+			make_parallel(sph, b, r), [] (Info info, Context cx)
 			{
 				cx->set_source_rgb(0.5, 0.5, 0.5);
 				cx->set_line_width(0.004);
@@ -46,7 +46,7 @@ void Scam::add_coordinates(Array<ptr<RenderObject>> scene, Spherical_rotation co
 			})));
 		else
 		scene.push_back(ptr<RenderObject>(new SegmentObject(
-			make_parallel(sph, b), [] (Info info, Context cx)
+			make_parallel(sph, b, r), [] (Info info, Context cx)
 			{
 				cx->set_source_rgb(0.5, 0.5, 0.5);
 				cx->set_line_width(0.002);
@@ -57,7 +57,7 @@ void Scam::add_coordinates(Array<ptr<RenderObject>> scene, Spherical_rotation co
 	for (int l = -180; l < 180; l += 15)
 	{
 		scene.push_back(ptr<RenderObject>(new SegmentObject(
-			make_meridian(sph, l), [] (Info info, Context cx)
+			make_meridian(sph, l, r), [] (Info info, Context cx)
 			{
 				cx->set_source_rgb(0.5, 0.5, 0.5);
 				cx->set_line_width(0.002);
