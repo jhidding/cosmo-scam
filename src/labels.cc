@@ -227,3 +227,104 @@ Material Scam::make_vel_material(bool rv, double w)
 	};
 }
 
+Material Scam::make_rainbow_material(bool rv, double a, double b)
+{
+	return [rv, b, a] (Info info, Context cx)
+	{
+		auto s_ = info.get<double>("incidence");
+		auto d_ = info.get<double>("density");
+		auto z_ = info.get<double>("z");
+		double s, d, z;
+		if (s_) s = fabs(*s_);
+		if (d_) d = sqrt(*d_);
+		if (z_) z = *z_;
+
+		d = std::max(5., d); d = std::min(10., d);
+		d = (d - 5.) / 5.;
+
+		z = std::max(a, z); z = std::min(b, z);
+		z = (z-a) / (b-a);
+
+		auto Z = (rv ?
+			Colour::HSVA(z*2./3, 0.9 - d*0.35, 1.0-s/3, 0.5 + d/2 - s/2) :
+			//Colour::HSVA(z*2./3, s, 1.0 - d*0.5, 0.5 + d/2 - s/2));
+			Colour::HSVA(z*2./3, 0.5 + s/5 + d*0.3, 1.0 - d*0.5, 0.5 + d/2 - s/2));
+
+		cx->set_source_rgba(Z.r(), Z.g(), Z.b(), Z.a());
+		cx->fill_preserve();
+		
+		if (rv) cx->set_source_rgba(0,0,0,0.2);
+		else cx->set_source_rgba(1,1,1,0.18);
+
+		cx->set_line_width(0.001);
+		cx->stroke();
+	};
+}
+
+Material Scam::make_mistwall_material(bool rv, double a, double b)
+{
+	return [rv, b, a] (Info info, Context cx)
+	{
+		auto s_ = info.get<double>("incidence");
+		auto d_ = info.get<double>("density");
+		auto z_ = info.get<double>("z");
+		double s, d, z;
+		if (s_) s = fabs(*s_);
+		if (d_) d = sqrt(*d_);
+		if (z_) z = *z_;
+
+		d = std::max(5., d); d = std::min(10., d);
+		d = (d - 5.) / 5.;
+
+		z = std::max(a, z); z = std::min(b, z);
+		z = (z-a) / (b-a);
+
+		auto Z = (rv ?
+			Colour::HSVA(z*2./3, 0.9 - d*0.35, 1.0-s/3, 0.5 + d/2 - s/2) :
+			//Colour::HSVA(z*2./3, s, 1.0 - d*0.5, 0.5 + d/2 - s/2));
+			Colour::HSVA(z*2./3, 0.5 + s/5 + d*0.3, 1.0 - d*0.5, 0.5 + d/2 - s/2));
+
+		cx->set_source_rgba(Z.r(), Z.g(), Z.b(), Z.a());
+		cx->fill_preserve();
+		
+		if (rv) cx->set_source_rgba(0,0,0,0.2);
+		else cx->set_source_rgba(1,1,1,0.18);
+
+		cx->set_line_width(0.001);
+		cx->stroke();
+	};
+}
+
+Material Scam::make_mistfila_material(bool rv, double a, double b)
+{
+	return [rv] (Info info, Context cx)
+	{
+		auto d_ = info.get<double>("density");
+		auto z_ = info.get<double>("z");
+		double d;
+		if (d_) d = sqrt(*d_);
+		d = std::max(10., d); d = std::min(30., d);
+		d = (d - 10.) / 20.;
+		cx->set_line_cap(Cairo::LINE_CAP_ROUND);
+
+		if (rv)
+		{
+			cx->set_line_width(0.023 * d);
+			cx->set_source_rgba(0,0,0,0.5);
+			cx->stroke_preserve();
+			cx->set_line_width(0.02 * d);
+			cx->set_source_rgba(1,1,1,0.7);
+			cx->stroke();
+		}
+		else 
+		{
+			cx->set_line_width(0.023 * d);
+			cx->set_source_rgba(1,1,1,0.5);
+			cx->stroke_preserve();
+			cx->set_line_width(0.02 * d);
+			cx->set_source_rgba(0,0,0,0.7);
+			cx->stroke();
+		}
+	};
+}
+

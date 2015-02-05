@@ -10,4 +10,7 @@ namespace Scam
 	extern Material make_galaxy_material(bool rv);
 	extern Material make_halo_material(bool rv);
 	extern Material make_vel_material(bool rv, double w);
+	extern Material make_rainbow_material(bool rv, double a=40., double b=70.);
+	extern Material make_mistwall_material(bool rv, double a=40., double b=70.);
+	extern Material make_mistfila_material(bool rv, double a=40., double b=70.);
 }

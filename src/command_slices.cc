@@ -18,14 +18,14 @@ using namespace System;
 using namespace Scam;
 using namespace TwoMass;
 
-std::function<void (Context)> prepare_context_slice(int w, int h, double L, bool rv)
+std::function<void (Context)> prepare_context_slice(int w, int h, double L, double suble, bool rv)
 {
-	return [w,h,L,rv] (Context cx)
+	return [w,h,L,suble, rv] (Context cx)
 	{
 		cx->translate(w/2, h/2);
-		cx->scale(h/(0.55*L), h/(0.55*L));
+		cx->scale(h/(suble*1.05), h/(suble*1.05));
 		//cx->translate(-L/2, -L/2);
-		cx->rectangle(-L/4,-L/4, L/2,L/2);
+		cx->rectangle(-suble/2,-suble/2, suble, suble);
 		if (rv) cx->set_source_rgba(1,1,1,0.5);
 		else cx->set_source_rgba(0,0,0,0.5);
 		cx->set_line_width(1);
@@ -73,7 +73,7 @@ void command_slices(int argc_, char **argv_)
 			"include Halo catalog."}),
 		Option({Option::VALUED | Option::CHECK, "i", "id", date_string(),
 			"identifier for filenames."}),
-		Option({Option::VALUED | Option::CHECK, "L", "size", "100",
+		Option({Option::VALUED | Option::CHECK, "L", "size", "180",
 			"size of the box."}),
 		Option({Option::VALUED | Option::CHECK, "t", "time", "1.0",
 			"growing mode parameter."}),
@@ -81,9 +81,12 @@ void command_slices(int argc_, char **argv_)
 			"selection radius."}),
 		Option({Option::VALUED | Option::CHECK, "dr", "dr", "10",
 			"selection radius."}),
-		Option({Option::VALUED | Option::CHECK, "f", "fila-lim", "200.0",
+
+		Option({Option::VALUED | Option::CHECK, "subl", "sub-length", "160",
+			"width of slice box"}),
+		Option({Option::VALUED | Option::CHECK, "f", "fila-lim", "100.0",
 			"lower limit of filament density to show."}),
-		Option({Option::VALUED | Option::CHECK, "w", "wall-lim", "20.0",
+		Option({Option::VALUED | Option::CHECK, "w", "wall-lim", "10.0",
 			"lower limit of wall density to show."}) );
 
 	if (argv.get<bool>("help"))
@@ -166,8 +169,10 @@ void command_slices(int argc_, char **argv_)
 	auto vel_material = scale_material(make_vel_material(rv, argv.get<double>("vel-width")), 
 		L/(2*sqrt(2)));
 	
+	double suble = argv.get<double>("sub-length");
 	std::vector<double> slices;
-	for (double r = L/4; r+dr <= (3*L/4); r +=step) slices.push_back(r);
+	for (double r = (L-suble)/2; r+dr <= (L+suble)/2; r +=step) slices.push_back(r);
+
 		
 	for (unsigned k = 0; k < 3; ++k) {
 	//#pragma omp parallel for
@@ -201,7 +206,9 @@ void command_slices(int argc_, char **argv_)
 				break;
 		}
 
-		Cuboid SelC(Point(L/4, L/4, L/4), Point(3*L/4, 3*L/4, 3*L/4));
+		double  a = (L - suble) / 2,
+			b = a + suble;
+		Cuboid SelC(Point(a, a, a), Point(b, b, b));
 
 		std::cout << "filtering polygons slice x_" << k << " = " << r << "\n";
 
@@ -276,9 +283,10 @@ void command_slices(int argc_, char **argv_)
 		}
 		std::cerr << "#segments: " << filtered_segments.size() << std::endl;
 
+		auto rainbow_material = make_rainbow_material(rv, L - r - dr, L - r);
 		Array<ptr<RenderObject>> scene;
 		scene.push_back(ptr<RenderObject>(new PolygonObject(
-			filtered_polygons, wall_material)));
+			filtered_polygons, rainbow_material)));
 		
 		scene.push_back(ptr<RenderObject>(new SegmentObject(
 			filtered_segments, filament_material)));
@@ -304,7 +312,7 @@ void command_slices(int argc_, char **argv_)
 		unsigned rx = argv.get<unsigned>("resx"),
 			 ry = argv.get<unsigned>("resy");
 		auto R = Renderer::Image(rx, ry);
-		R->apply(prepare_context_slice(rx, ry, argv.get<double>("size"), rv));
+		R->apply(prepare_context_slice(rx, ry, argv.get<double>("size"), suble, rv));
 
 		R->render(scene, C);
 		R->write_to_png(fn_output_png);

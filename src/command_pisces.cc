@@ -305,40 +305,6 @@ void add_filtered_coordinates(Array<ptr<RenderObject>> scene, Spherical_rotation
 	}
 }
 
-Material make_rainbow_material(bool rv, double a=40., double b=70.)
-{
-	return [rv, b, a] (Info info, Context cx)
-	{
-		auto s_ = info.get<double>("incidence");
-		auto d_ = info.get<double>("density");
-		auto z_ = info.get<double>("z");
-		double s, d, z;
-		if (s_) s = fabs(*s_);
-		if (d_) d = sqrt(*d_);
-		if (z_) z = *z_;
-
-		d = std::max(5., d); d = std::min(10., d);
-		d = (d - 5.) / 5.;
-
-		z = std::max(a, z); z = std::min(b, z);
-		z = (z-a) / (b-a);
-
-		auto Z = (rv ?
-			Colour::HSVA(z*2./3, 0.9 - d*0.35, 1.0-s/3, 0.5 + d/2 - s/2) :
-			//Colour::HSVA(z*2./3, s, 1.0 - d*0.5, 0.5 + d/2 - s/2));
-			Colour::HSVA(z*2./3, 0.5 + s/5 + d*0.3, 1.0 - d*0.5, 0.5 + d/2 - s/2));
-
-		cx->set_source_rgba(Z.r(), Z.g(), Z.b(), Z.a());
-		cx->fill_preserve();
-		
-		if (rv) cx->set_source_rgba(0,0,0,0.2);
-		else cx->set_source_rgba(1,1,1,0.18);
-
-		cx->set_line_width(0.001);
-		cx->stroke();
-	};
-}
-
 void command_pisces(int argc_, char **argv_)
 {
 	Argv argv = read_arguments(argc_, argv_,
@@ -535,7 +501,7 @@ void command_pisces(int argc_, char **argv_)
 	scene.push_back(ptr<RenderObject>(new PolygonObject(
 		cf(polygons), make_rainbow_material(rv, 1.3/1.5, 1.8/1.5))));
 	scene.push_back(ptr<RenderObject>(new SegmentObject(
-		cf(segments), filament_material)));
+		cf(segments), make_filament_material(false))));
 	if (galaxies)
 	scene.push_back(ptr<RenderObject>(new VertexObject(
 		cf(*galaxies), galaxy_material)));
