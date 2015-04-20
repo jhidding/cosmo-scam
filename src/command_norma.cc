@@ -5,8 +5,7 @@ using namespace System;
 using namespace Scam;
 using namespace TwoMass;
 
-std::function<void (Context)> prepare_context_extract_pp(
-	int w, int h, double L, bool rv)
+std::function<void (Context)> prepare_context_extract_norma(int w, int h, double L, bool rv)
 {
 	return [w,h,L,rv] (Context cx)
 	{
@@ -22,48 +21,42 @@ std::function<void (Context)> prepare_context_extract_pp(
 	};
 }
 
-class PP_filter
+class Norma_filter
 {
-  	// A262	 	136.59	-25.09	0.0161
-  	// A400	 	170.25	-44.93	0.0232
-  	// A426	 	150.39	-13.38	0.0183 Perseus
+	// A3627	325.34	 -7.26	0.0143 Norma
+	// A1060	269.64	 26.51	0.0114 Hydra
+	// A3526	302.42	 21.56	0.0110 Centaurus
 
 	Plane 	P, Top, Bottom;
 	Sphere 	S;
 	Vector  hub, m_normal;
 
-	public:
-		PP_filter(double width, double radius, double offset = 0.0)
+	public:                 
+		Norma_filter(double width, double radius, double offset = 0.0)
 		{
 			double ra, dec;
 			//ga_to_sg(radians(191.07), radians(44.41), ra, dec);
 			//Point A779  = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0266 * 2997.92458);
-			ga_to_sg(radians(170.25), radians(-44.93), ra, dec);
-			Point A400 = Point(90,90,90) + spherical_to_cartesian(
-				ra, dec, 0.0232 * 2997.92458);
-			ga_to_sg(radians(150.39), radians(-13.38), ra, dec);
-			Point A426 = Point(90,90,90) + spherical_to_cartesian(
-				ra, dec, 0.0183 * 2997.92458);
-			ga_to_sg( radians(136.59), radians(-25.09), ra, dec);
-			Point A262 = Point(90,90,90) + spherical_to_cartesian(
-				ra, dec, 0.0161 * 2997.92458);
+			ga_to_sg(radians(325.34), radians(-7.26), ra, dec);
+			Point A3627 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0143 * 2997.92458);
+			ga_to_sg(radians(269.64), radians(26.51), ra, dec);
+			Point A1060 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0114 * 2997.92458);
+			ga_to_sg( radians(302.42), radians(21.56), ra, dec);
+			Point A3526 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0110 * 2997.92458);
 			Point earth = Point(90,90,90);
-
-			P = Plane(A262, Vector::cross(
-				A426 - A262, earth - A262).normalize());
-			Top = Plane(P.origin() + P.normal() *
-				(width/2 + offset), P.normal());
-			Bottom = Plane(P.origin() - P.normal() *
-				(width/2 - offset), -P.normal());
+			
+			P = Plane(A3627 + (A3526-A3627)*0.5, 
+				Vector::cross(A3526 - A3627, earth - A3627).normalize());
+			Top = Plane(P.origin() + P.normal() * (width/2 + offset), P.normal());
+			Bottom = Plane(P.origin() - P.normal() * (width/2 - offset), -P.normal());
 			S = Sphere(P.origin(), radius);
 
-			hub = A426 - A400;
+			hub = P.normal();
 			m_normal = P.normal();
-			Point Earth(90,90,90);
 		}
 
 		Point center() const { return P.origin(); }
-		Vector shub() const { return hub; }
+		Vector shub() const { return hub; } 
 		Vector normal() const { return m_normal; }
 
 		Array<Vertex> operator()(Array<Vertex> A) const
@@ -71,8 +64,7 @@ class PP_filter
 			Array<Vertex> B;
 			for (Vertex const &a : A)
 			{
-				if (S.is_below(a) and Top.is_below(a)
-						and Bottom.is_below(a))
+				if (S.is_below(a) and Top.is_below(a) and Bottom.is_below(a))
 					B.push_back(a);
 			}
 			return B;
@@ -115,10 +107,10 @@ class PP_filter
 		}
 };
 
-void command_pisces(int argc_, char **argv_)
+void command_norma(int argc_, char **argv_)
 {
 	Argv argv = read_arguments(argc_, argv_,
-		Option({0, "h", "help", "false",
+		Option({0, "h", "help", "false", 
 			"print this help."}),
 		Option({0, "2m", "2mass", "false",
 			"include 2Mass into rendering."}),
@@ -188,7 +180,7 @@ void command_pisces(int argc_, char **argv_)
 
 	std::cerr << "Reading " << fn_i_fila << " ..." << std::endl;
 	v->clear(); ply = make_ptr<PLY::PLY>(); fi.close();
-
+	
 	std::ifstream fi2(fn_i_fila);
 	format = PLY::read_header(fi2, ply);
 	ply->print_header(std::cout, PLY::BINARY);
@@ -207,7 +199,7 @@ void command_pisces(int argc_, char **argv_)
 	bool rv = argv.get<bool>("reverse");
 	Maybe<Array<Vertex>> clusters;
 	if (argv.get<bool>("abell"))
-		clusters = Just(read_abell("perseus_catalog.tsv", true, rv));
+		clusters = Just(read_abell("abell_catalog.tsv", true, rv));
 	else
 		clusters = Nothing;
 
@@ -231,15 +223,15 @@ void command_pisces(int argc_, char **argv_)
 
 	if (argv.get<bool>("slices"))
 	{
-		PP_filter cf(140, 50);
+		Norma_filter cf(140, 80);
 		auto pp_walls = cf(polygons);
 		auto pp_fills = cf(segments);
-
-			Shell_filter S(40, 70);
+		
+			Shell_filter S(20, 80);
 			Array<ptr<RenderObject>> scene;
 
 			scene.push_back(ptr<RenderObject>(new PolygonObject(
-				S(pp_walls), make_rainbow_material(rv))));
+				S(pp_walls), make_rainbow_material(rv, 20, 50))));
 			scene.push_back(ptr<RenderObject>(new SegmentObject(
 				S(pp_fills), make_filament_material(false))));
 			if (galaxies)
@@ -273,21 +265,21 @@ void command_pisces(int argc_, char **argv_)
 
 			Point pointing = cf.center();
 			double ra, dec; side(0, M_PI/2, ra, dec);
-			Vector shub = -spherical_to_cartesian(ra, dec, L);
+			Vector shub = -cf.shub();//-spherical_to_cartesian(ra, dec, L);
 
 			side(6./12. * M_PI, 0, ra, dec);
 			Vector angle = shub*0.1 + spherical_to_cartesian(ra, dec, L)*0.2;
-
+					
 			auto C = make_ptr<Map_projection_camera>(
 				Point(L/2,L/2,L/2), pointing, shub,
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
 				Map_projection(Aitoff_Hammer));
 			/*
 			auto C = make_ptr<Camera>(
-				Point(90,90,90) + angle,
+				Point(90,90,90) + angle, 
 				pointing, shub,
 				//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
-
+					
 					scaled_parallel_projection(0.015));*/
 
 			unsigned rx = argv.get<unsigned>("resx"),
@@ -296,17 +288,17 @@ void command_pisces(int argc_, char **argv_)
 			R->apply([rx, ry] (Context cx)
 			{
 				cx->scale(ry*0.5, ry*0.5);
-				cx->translate(1.0, 1.0);
+				cx->translate((1.0 * rx)/ry, 1.0);
 			});
 			R->render(scene, C);
-			R->write_to_png(Misc::format("pp-skun.png"));
+			R->write_to_png(Misc::format("norma-skun.png"));
 			R->finish();
 
 		return;
 	}
 
 	double soff = argv.get<double>("offset");
-	PP_filter cf(15, 50, soff);
+	Norma_filter cf(15, 180, soff);
 	Array<ptr<RenderObject>> scene;
 	scene.push_back(ptr<RenderObject>(new PolygonObject(
 		cf(polygons), make_rainbow_material(rv, 1.3/1.5, 1.8/1.5))));
@@ -346,7 +338,7 @@ void command_pisces(int argc_, char **argv_)
 
 		Point pointing = cf.center();
 		Vector shub = -cf.shub();
-
+				
 		auto C = make_ptr<Map_projection_camera>(
 			Point(L/2,L/2,L/2), pointing, shub,
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
@@ -361,7 +353,7 @@ void command_pisces(int argc_, char **argv_)
 			cx->translate(1.0, 1.0);
 		});
 		R->render(scene, C);
-		R->write_to_png("pp-sky.png");
+		R->write_to_png("norma-sky.png");
 		R->finish();
 		return;
 	}
@@ -369,10 +361,10 @@ void command_pisces(int argc_, char **argv_)
 	if (argv.get<bool>("side"))
 	{
 		// z
-		Point pointing = cf.center();
-		{
+		Point pointing = Point(90,90,90);
+		{		
 		auto C = make_ptr<Camera>(
-			pointing + cf.normal()*50, pointing, -(pointing - Point(L/2, L/2, L/2)),
+			pointing + cf.normal()*50, pointing, -(cf.center() - Point(L/2, L/2, L/2)),
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
 				scaled_parallel_projection(0.02));
 
@@ -381,17 +373,17 @@ void command_pisces(int argc_, char **argv_)
 		auto R = Renderer::Image(rx, ry);
 		R->apply([rx, ry] (Context cx)
 		{
-			cx->scale(ry*0.5, ry*0.5);
-			cx->translate(1.0, 1.0);
+			cx->scale(ry*0.25, ry*0.25);
+			cx->translate(2.0, 2.0);
 			cx->set_line_join(Cairo::LINE_JOIN_ROUND);
 		});
 		R->render(scene, C);
-		R->write_to_png(Misc::format("pp-z-", soff, ".png"));
+		R->write_to_png(Misc::format("norma-z-", soff, ".png"));
 		R->finish();
 		}
 
 	/*	//y
-		{
+		{		
 		auto C = make_ptr<Camera>(
 			pointing + Vector(0.001, L, 0.001), pointing, -(pointing - Point(L/2, L/2, L/2)),
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
@@ -412,7 +404,7 @@ void command_pisces(int argc_, char **argv_)
 		}
 
 		//xyz
-		{
+		{		
 		auto C = make_ptr<Camera>(
 			pointing + Vector(L, L, L), pointing, -(pointing - Point(L/2, L/2, L/2)),
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
@@ -441,13 +433,13 @@ void command_pisces(int argc_, char **argv_)
 	unsigned rx = argv.get<unsigned>("resx"),
 		 ry = argv.get<unsigned>("resy");
 	for (unsigned i = 0; i < th.size(); ++i)
-	{
+	{	
 		Point p = cf.center();
 		Vector dp(cos(th[i]), sin(th[i]), sin(3./2*th[i]));
 		auto C = make_ptr<Camera>(p + dp * 50, cf.center(), Vector(0,0,1),
 			scaled_parallel_projection(0.015));
 		auto R = Renderer::Image(rx, ry);
-		R->apply(prepare_context_extract_pp(rx, ry, rad*2, rv));
+		R->apply(prepare_context_extract_norma(rx, ry, rad*2, rv));
 		R->render(scene, C);
 		R->write_to_png(Misc::format("perseus-b-", std::setfill('0'), std::setw(3), i, ".png"));
 		R->finish();
@@ -456,4 +448,5 @@ void command_pisces(int argc_, char **argv_)
 
 
 #include "base/global.hh"
-System::Global<Command> _COMMAND_PISCES("pisces", command_pisces);
+System::Global<Command> _COMMAND_NORMA("norma", command_norma);
+
