@@ -22,7 +22,8 @@ using namespace System;
 using namespace Scam;
 using namespace TwoMass;
 
-std::function<void (Context)> prepare_context_extract_pp(int w, int h, double L, bool rv)
+std::function<void (Context)> prepare_context_extract_pp(
+	int w, int h, double L, bool rv)
 {
 	return [w,h,L,rv] (Context cx)
 	{
@@ -55,16 +56,22 @@ class PP_filter
 			//ga_to_sg(radians(191.07), radians(44.41), ra, dec);
 			//Point A779  = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0266 * 2997.92458);
 			ga_to_sg(radians(170.25), radians(-44.93), ra, dec);
-			Point A400 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0232 * 2997.92458);
+			Point A400 = Point(90,90,90) + spherical_to_cartesian(
+				ra, dec, 0.0232 * 2997.92458);
 			ga_to_sg(radians(150.39), radians(-13.38), ra, dec);
-			Point A426 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0183 * 2997.92458);
+			Point A426 = Point(90,90,90) + spherical_to_cartesian(
+				ra, dec, 0.0183 * 2997.92458);
 			ga_to_sg( radians(136.59), radians(-25.09), ra, dec);
-			Point A262 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0161 * 2997.92458);
+			Point A262 = Point(90,90,90) + spherical_to_cartesian(
+				ra, dec, 0.0161 * 2997.92458);
 			Point earth = Point(90,90,90);
 			
-			P = Plane(A262, Vector::cross(A426 - A262, earth - A262).normalize());
-			Top = Plane(P.origin() + P.normal() * (width/2 + offset), P.normal());
-			Bottom = Plane(P.origin() - P.normal() * (width/2 - offset), -P.normal());
+			P = Plane(A262, Vector::cross(
+				A426 - A262, earth - A262).normalize());
+			Top = Plane(P.origin() + P.normal() * 
+				(width/2 + offset), P.normal());
+			Bottom = Plane(P.origin() - P.normal() * 
+				(width/2 - offset), -P.normal());
 			S = Sphere(P.origin(), radius);
 
 			hub = A426 - A400;
@@ -81,7 +88,8 @@ class PP_filter
 			Array<Vertex> B;
 			for (Vertex const &a : A)
 			{
-				if (S.is_below(a) and Top.is_below(a) and Bottom.is_below(a))
+				if (S.is_below(a) and Top.is_below(a) 
+						and Bottom.is_below(a))
 					B.push_back(a);
 			}
 			return B;
@@ -140,7 +148,8 @@ class RA_Dec_filter
 	Plane	A1, A2, B1, B2;
 
 	public:
-		RA_Dec_filter(Spherical_rotation const &T, double ra_min, double ra_max, double dec_min, double dec_max)
+		RA_Dec_filter(Spherical_rotation const &T, 
+			double ra_min, double ra_max, double dec_min, double dec_max)
 		{
 			auto vec = [T] (double l, double b)
 			{
@@ -421,7 +430,7 @@ void command_pisces(int argc_, char **argv_)
 
 	if (argv.get<bool>("slices"))
 	{
-		PP_filter cf(140, 70);
+		PP_filter cf(140, 50);
 		auto pp_walls = cf(polygons);
 		auto pp_fills = cf(segments);
 		
