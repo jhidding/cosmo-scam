@@ -286,7 +286,7 @@ void command_slices(int argc_, char **argv_)
 		auto rainbow_material = make_rainbow_material(rv, L - r - dr, L - r);
 		Array<ptr<RenderObject>> scene;
 		scene.push_back(ptr<RenderObject>(new PolygonObject(
-			filtered_polygons, rainbow_material)));
+			filtered_polygons, wall_material)));
 		
 		scene.push_back(ptr<RenderObject>(new SegmentObject(
 			filtered_segments, filament_material)));
