@@ -5,7 +5,8 @@ using namespace System;
 using namespace Scam;
 using namespace TwoMass;
 
-std::function<void (Context)> prepare_context_extract_pp(int w, int h, double L, bool rv)
+std::function<void (Context)> prepare_context_extract_pp(
+	int w, int h, double L, bool rv)
 {
 	return [w,h,L,rv] (Context cx)
 	{
@@ -23,31 +24,37 @@ std::function<void (Context)> prepare_context_extract_pp(int w, int h, double L,
 
 class PP_filter
 {
-  	// A262	 	136.59	-25.09	0.0161	
-  	// A400	 	170.25	-44.93	0.0232	
+  	// A262	 	136.59	-25.09	0.0161
+  	// A400	 	170.25	-44.93	0.0232
   	// A426	 	150.39	-13.38	0.0183 Perseus
 
 	Plane 	P, Top, Bottom;
 	Sphere 	S;
 	Vector  hub, m_normal;
 
-	public:                 
+	public:
 		PP_filter(double width, double radius, double offset = 0.0)
 		{
 			double ra, dec;
 			//ga_to_sg(radians(191.07), radians(44.41), ra, dec);
 			//Point A779  = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0266 * 2997.92458);
 			ga_to_sg(radians(170.25), radians(-44.93), ra, dec);
-			Point A400 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0232 * 2997.92458);
+			Point A400 = Point(90,90,90) + spherical_to_cartesian(
+				ra, dec, 0.0232 * 2997.92458);
 			ga_to_sg(radians(150.39), radians(-13.38), ra, dec);
-			Point A426 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0183 * 2997.92458);
+			Point A426 = Point(90,90,90) + spherical_to_cartesian(
+				ra, dec, 0.0183 * 2997.92458);
 			ga_to_sg( radians(136.59), radians(-25.09), ra, dec);
-			Point A262 = Point(90,90,90) + spherical_to_cartesian(ra, dec, 0.0161 * 2997.92458);
+			Point A262 = Point(90,90,90) + spherical_to_cartesian(
+				ra, dec, 0.0161 * 2997.92458);
 			Point earth = Point(90,90,90);
-			
-			P = Plane(A262, Vector::cross(A426 - A262, earth - A262).normalize());
-			Top = Plane(P.origin() + P.normal() * (width/2 + offset), P.normal());
-			Bottom = Plane(P.origin() - P.normal() * (width/2 - offset), -P.normal());
+
+			P = Plane(A262, Vector::cross(
+				A426 - A262, earth - A262).normalize());
+			Top = Plane(P.origin() + P.normal() *
+				(width/2 + offset), P.normal());
+			Bottom = Plane(P.origin() - P.normal() *
+				(width/2 - offset), -P.normal());
 			S = Sphere(P.origin(), radius);
 
 			hub = A426 - A400;
@@ -56,7 +63,7 @@ class PP_filter
 		}
 
 		Point center() const { return P.origin(); }
-		Vector shub() const { return hub; } 
+		Vector shub() const { return hub; }
 		Vector normal() const { return m_normal; }
 
 		Array<Vertex> operator()(Array<Vertex> A) const
@@ -64,7 +71,8 @@ class PP_filter
 			Array<Vertex> B;
 			for (Vertex const &a : A)
 			{
-				if (S.is_below(a) and Top.is_below(a) and Bottom.is_below(a))
+				if (S.is_below(a) and Top.is_below(a)
+						and Bottom.is_below(a))
 					B.push_back(a);
 			}
 			return B;
@@ -110,7 +118,7 @@ class PP_filter
 void command_pisces(int argc_, char **argv_)
 {
 	Argv argv = read_arguments(argc_, argv_,
-		Option({0, "h", "help", "false", 
+		Option({0, "h", "help", "false",
 			"print this help."}),
 		Option({0, "2m", "2mass", "false",
 			"include 2Mass into rendering."}),
@@ -180,7 +188,7 @@ void command_pisces(int argc_, char **argv_)
 
 	std::cerr << "Reading " << fn_i_fila << " ..." << std::endl;
 	v->clear(); ply = make_ptr<PLY::PLY>(); fi.close();
-	
+
 	std::ifstream fi2(fn_i_fila);
 	format = PLY::read_header(fi2, ply);
 	ply->print_header(std::cout, PLY::BINARY);
@@ -223,10 +231,10 @@ void command_pisces(int argc_, char **argv_)
 
 	if (argv.get<bool>("slices"))
 	{
-		PP_filter cf(140, 70);
+		PP_filter cf(140, 50);
 		auto pp_walls = cf(polygons);
 		auto pp_fills = cf(segments);
-		
+
 			Shell_filter S(40, 70);
 			Array<ptr<RenderObject>> scene;
 
@@ -269,17 +277,17 @@ void command_pisces(int argc_, char **argv_)
 
 			side(6./12. * M_PI, 0, ra, dec);
 			Vector angle = shub*0.1 + spherical_to_cartesian(ra, dec, L)*0.2;
-					
+
 			auto C = make_ptr<Map_projection_camera>(
 				Point(L/2,L/2,L/2), pointing, shub,
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
 				Map_projection(Aitoff_Hammer));
 			/*
 			auto C = make_ptr<Camera>(
-				Point(90,90,90) + angle, 
+				Point(90,90,90) + angle,
 				pointing, shub,
 				//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
-					
+
 					scaled_parallel_projection(0.015));*/
 
 			unsigned rx = argv.get<unsigned>("resx"),
@@ -338,7 +346,7 @@ void command_pisces(int argc_, char **argv_)
 
 		Point pointing = cf.center();
 		Vector shub = -cf.shub();
-				
+
 		auto C = make_ptr<Map_projection_camera>(
 			Point(L/2,L/2,L/2), pointing, shub,
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
@@ -362,7 +370,7 @@ void command_pisces(int argc_, char **argv_)
 	{
 		// z
 		Point pointing = cf.center();
-		{		
+		{
 		auto C = make_ptr<Camera>(
 			pointing + cf.normal()*50, pointing, -(pointing - Point(L/2, L/2, L/2)),
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
@@ -383,7 +391,7 @@ void command_pisces(int argc_, char **argv_)
 		}
 
 	/*	//y
-		{		
+		{
 		auto C = make_ptr<Camera>(
 			pointing + Vector(0.001, L, 0.001), pointing, -(pointing - Point(L/2, L/2, L/2)),
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
@@ -404,7 +412,7 @@ void command_pisces(int argc_, char **argv_)
 		}
 
 		//xyz
-		{		
+		{
 		auto C = make_ptr<Camera>(
 			pointing + Vector(L, L, L), pointing, -(pointing - Point(L/2, L/2, L/2)),
 			//Point(-1.0, 0.5, 1.0), centre, Vector(0, -1, 0),
@@ -433,7 +441,7 @@ void command_pisces(int argc_, char **argv_)
 	unsigned rx = argv.get<unsigned>("resx"),
 		 ry = argv.get<unsigned>("resy");
 	for (unsigned i = 0; i < th.size(); ++i)
-	{	
+	{
 		Point p = cf.center();
 		Vector dp(cos(th[i]), sin(th[i]), sin(3./2*th[i]));
 		auto C = make_ptr<Camera>(p + dp * 50, cf.center(), Vector(0,0,1),
@@ -449,4 +457,3 @@ void command_pisces(int argc_, char **argv_)
 
 #include "base/global.hh"
 System::Global<Command> _COMMAND_PISCES("pisces", command_pisces);
-
