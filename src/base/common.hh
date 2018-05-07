@@ -5,6 +5,7 @@
 #include <memory>
 #include <algorithm>
 #include <sstream>
+#include <numeric>
 
 namespace System
 {
@@ -26,7 +27,7 @@ namespace System
 	template <typename T>
 	void read_block(std::istream &f, std::vector<T> &v)
 	{
-		uint64_t bs1, bs2;	
+		uint64_t bs1, bs2;
 		f.read(reinterpret_cast<char *>(&bs1), sizeof(uint64_t));
 		if (f.fail())
 		{
@@ -89,10 +90,10 @@ namespace System
 		public:
 			typedef typename T::value_type value_type;
 			typedef typename T::const_iterator const_iterator;
-			
+
 			Tail(T const &a):
 				b(a.begin()), e(a.end())
-			{ 
+			{
 				++b;
 			}
 
@@ -137,8 +138,8 @@ namespace Scam
 
 			Seq() {}
 
-			Seq(T *data_): 
-				_data(data_) 
+			Seq(T *data_):
+				_data(data_)
 			{}
 
 			T &operator*() { return *_data; }
@@ -153,9 +154,9 @@ namespace Scam
 			value_type const &operator[](size_t idx) const { return (*_data)[idx]; }
 			void push_back(value_type const &t) { _data->push_back(t); }
 			iterator begin() const { return _data->begin(); }
-			iterator end() const { return _data->end(); }	
+			iterator end() const { return _data->end(); }
 			const_iterator cbegin() const { return _data->cbegin(); }
-			const_iterator cend() const { return _data->cend(); }	
+			const_iterator cend() const { return _data->cend(); }
 	};
 
 	template <typename T>
@@ -218,7 +219,7 @@ namespace Scam
 			template <typename T>
 			operator Maybe<T>() const { return Maybe<T>(); }
 	};
-	
+
 	extern MaybeNothing Nothing;
 
 	template <typename T>
@@ -248,10 +249,10 @@ namespace Scam
 		public:
 			typedef typename T::value_type value_type;
 			typedef typename T::const_iterator const_iterator;
-			
+
 			Tail(T const &a):
 				b(a.begin()), e(a.end())
-			{ 
+			{
 				++b;
 			}
 
@@ -317,7 +318,7 @@ namespace Scam
 	template <typename T>
 	typename T::value_type product(T const &A)
 	{
-		return std::accumulate(A.begin(), A.end(), (typename T::value_type)(1), 
+		return std::accumulate(A.begin(), A.end(), (typename T::value_type)(1),
 				std::multiplies<typename T::value_type>());
 	}
 }
@@ -348,4 +349,3 @@ inline size_t ipow(size_t N, unsigned R)
 		S *= N;
 	return S;
 }
-

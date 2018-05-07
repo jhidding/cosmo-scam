@@ -9,7 +9,7 @@
 
 namespace PLY
 {
-	extern Format read_header(std::istream &fi, std::shared_ptr<PLY> ply) throw (Exception);
+	extern Format read_header(std::istream &fi, std::shared_ptr<PLY> ply);
 
 	class Item: public std::map<std::string, ByteVector>
 	{
@@ -24,4 +24,3 @@ namespace PLY
 
 	extern Block read_element(std::istream &fi, Header::Element const &e, Format format);
 }
-

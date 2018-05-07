@@ -18,7 +18,52 @@ using namespace System;
 using namespace Scam;
 using namespace TwoMass;
 
-std::function<void (Context)> prepare_context_slice(int w, int h, double L, double suble, bool rv)
+struct UrsaMember
+{
+	double l, b, v, ox, oy;
+	std::string name;
+};
+
+Array<Vertex> make_ursa_group(bool rv)
+{
+	Array<Vertex> A;
+	std::vector<UrsaMember> G = {
+		{ 102.04, 59.77, 246, 0, +0.1, "M101" },
+		{ 104.85, 68.56, 463, +0.1, -0.1, "M51" },
+		{  95.72, 11.67,  40, 0, -0.1, "NGC6946" },
+		{   0.00,  0.00,   0, -0.1, +0.1, "LG" } };
+
+	for (auto const &g : G)
+	{
+		double sg_ra, sg_dec;
+		ga_to_sg(radians(g.l), radians(g.b), sg_ra, sg_dec);
+
+		double d = g.v / 100.0;
+		Vertex v(Point(90,90,90) + spherical_to_cartesian(sg_ra, sg_dec, d));
+		v.set_info("r", d);
+
+		std::string name;
+		if (g.name != "")
+		{
+			name = g.name;
+			v.set_info("name", g.name);
+		}
+
+		v.set_info("ox", g.ox); v.set_info("oy", g.oy);
+		TeX label; 
+		if (rv) label << "\\color{White}" << name;
+		else label << name;
+
+		label.make_svg();
+		v.set_info("svg", label.file_name());
+
+		A.push_back(v);
+	}
+	
+	return A;
+}
+
+std::function<void (Context)> prepare_context_lg(int w, int h, double L, double suble, bool rv)
 {
 	return [w,h,L,suble, rv] (Context cx)
 	{
@@ -28,7 +73,7 @@ std::function<void (Context)> prepare_context_slice(int w, int h, double L, doub
 		cx->rectangle(-suble/2,-suble/2, suble, suble);
 		if (rv) cx->set_source_rgba(1,1,1,0.5);
 		else cx->set_source_rgba(0,0,0,0.5);
-		cx->set_line_width(1);
+		cx->set_line_width(0.1);
 		cx->set_line_cap(Cairo::LINE_CAP_ROUND);
 		cx->stroke();
 	};
@@ -45,15 +90,15 @@ inline Material scale_material(Material M, double scale)
 	};
 }
 
-void command_slices(int argc_, char **argv_)
+void command_lg(int argc_, char **argv_)
 {
 	Argv argv = read_arguments(argc_, argv_,
 		Option({0, "h", "help", "false",
 			"print this help."}),
 		Option({0, "2m", "2mass", "false",
 			"include 2Mass into rendering."}),
-		Option({0, "ac", "abell", "false",
-			"include Abell cluster catalog."}),
+		Option({0, "um", "ursa-major", "false",
+			"include M101, M51 and NGC6946."}),
 		Option({0, "r", "reverse", "false",
 			"reverse colours."}),
 		Option({0, "v", "velocity", "false",
@@ -142,11 +187,11 @@ void command_slices(int argc_, char **argv_)
 		galaxies = Nothing;
 
 	bool rv = argv.get<bool>("reverse");
-	Maybe<Array<Vertex>> clusters;
-	if (argv.get<bool>("abell"))
-		clusters = Just(read_abell("abell_catalog.tsv", true, rv));
+	Maybe<Array<Vertex>> ursa_group;
+	if (argv.get<bool>("ursa-major"))
+		ursa_group = Just(make_ursa_group(rv));
 	else
-		clusters = Nothing;
+		ursa_group = Nothing;
 
 	Maybe<Array<Vertex>> haloes;
 	if (argv["haloes"] != "none")
@@ -170,10 +215,10 @@ void command_slices(int argc_, char **argv_)
 
 	double wga = argv.get<double>("wall-gradient-start");
 	double wgb = argv.get<double>("wall-gradient-end");
-	auto cluster_label = scale_material(make_cluster_label_material(rv), L/2.5);
+	auto cluster_label = scale_material(make_cluster_label_material(rv), L/20);
 	auto wall_material = make_wall_material(rv, wga, wgb);
 	auto filament_material = scale_material(make_filament_material(rv, 1.0, 20.0), L/(2*sqrt(2)));
-	auto galaxy_material = scale_material(make_galaxy_material(rv), L/(4*sqrt(2)));
+	auto galaxy_material = scale_material(make_galaxy_material(rv), L/20);
 	auto halo_material = make_halo_material(rv);
 	auto vel_material = make_vel_material(rv, argv.get<double>("vel-width"));
 
@@ -227,8 +272,8 @@ void command_slices(int argc_, char **argv_)
 		Array<Vertex>  filtered_clusters;
 		Array<Vertex>  filtered_velocities;
 
-		if (clusters)
-		for (Vertex const &c : *clusters)
+		if (ursa_group)
+		for (Vertex const &c : *ursa_group)
 		{
 			if (not SelC.is_below(c)) continue;
 			//auto r_ = c.get_info<double>("r");
@@ -329,7 +374,7 @@ void command_slices(int argc_, char **argv_)
 		unsigned rx = argv.get<unsigned>("resx"),
 			 ry = argv.get<unsigned>("resy");
 		auto R = Renderer::Image(rx, ry);
-		R->apply(prepare_context_slice(rx, ry, argv.get<double>("size"), suble, rv));
+		R->apply(prepare_context_lg(rx, ry, argv.get<double>("size"), suble, rv));
 
 		R->render(scene, C);
 		R->write_to_png(fn_output_png);
@@ -338,4 +383,5 @@ void command_slices(int argc_, char **argv_)
 }
 
 #include "base/global.hh"
-System::Global<Command> _COMMAND_SLICES("slice", command_slices);
+System::Global<Command> _COMMAND_LG("lg", command_lg);
+

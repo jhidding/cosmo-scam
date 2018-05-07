@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <array>
 #include <algorithm>
 #include <numeric>
@@ -114,4 +115,3 @@ namespace Scam
 		return out << a.x() << " " << a.y() << " " << a.z();
 	}
 }
-

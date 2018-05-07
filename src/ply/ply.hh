@@ -16,7 +16,7 @@ namespace PLY
 {
 	class PLY
 	{
-		friend std::shared_ptr<PLY> read(std::string const &) throw (Exception);
+		friend std::shared_ptr<PLY> read(std::string const &);
 
 		private:
 			Header 			m_header;
@@ -82,7 +82,6 @@ namespace PLY
 				add_properties(std::forward<Args>(args)...);
 			}
 	};
-	
-	extern std::shared_ptr<PLY> read(std::string const &filename) throw (Exception);
-}
 
+	extern std::shared_ptr<PLY> read(std::string const &filename);
+}

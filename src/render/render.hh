@@ -103,7 +103,9 @@ namespace Scam
 					double vy = *v.get_info<double>("vy");
 					double vz = *v.get_info<double>("vz");
 
-					auto P = (*C)(v, Vector(vx, vy, vz) * factor); 
+					// Camera returns pair of projected Point and Vector
+					// C(P, V) -> C(P), C(P+V) - C(P)
+					auto P = (*C)(v, Vector(vx, vy, vz) * factor);
 					Path G(false); G.push_back(P.first);
 
 					Info i = v.info();
@@ -204,7 +206,7 @@ namespace Scam
 
 			void finish()
 			{
-				m_surface->finish();	
+				m_surface->finish();
 			}
 
 			void apply(std::function<void (Context)> f)
@@ -221,4 +223,3 @@ namespace Scam
 			}
 	};
 }
-

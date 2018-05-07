@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <algorithm>
 #include <functional>
 #include <numeric>
@@ -47,7 +48,7 @@ namespace Scam
 
 			template <typename Fun>
 			mVector operate(Fun f) const
-			{ 
+			{
 				mVector a;
 				std::transform(begin(), end(), a.begin(), f);
 				return a;
@@ -55,7 +56,7 @@ namespace Scam
 
 			template <typename Fun>
 			mVector operate(Fun f, mVector const &o) const
-			{ 
+			{
 				mVector a;
 				std::transform(begin(), end(), o.begin(), a.begin(), f);
 				return a;
@@ -70,24 +71,24 @@ namespace Scam
 
 			template <typename U>
 			mVector operator/=(U o)
-			{ 
+			{
 				std::transform(begin(), end(), begin(),
-						std::bind2nd(std::divides<T>(), o)); 
-				return *this; 
+						std::bind2nd(std::divides<T>(), o));
+				return *this;
 			}
 			template <typename U>
 			mVector operator*=(U o)
-			{ 
+			{
 				std::transform(begin(), end(), begin(),
-						std::bind2nd(std::multiplies<T>(), o)); 
-				return *this; 
+						std::bind2nd(std::multiplies<T>(), o));
+				return *this;
 			}
 			template <typename U>
 			mVector operator%=(U o)
-			{ 
-				std::transform(begin(), end(), begin(), 
-						[o] (T a) { return modulus(a, o); }); 
-				return *this; 
+			{
+				std::transform(begin(), end(), begin(),
+						[o] (T a) { return modulus(a, o); });
+				return *this;
 			}
 
 			mVector operator+(mVector const &o) const
@@ -112,21 +113,21 @@ namespace Scam
 			// maths
 			mVector abs() const
 			{
-				mVector a; 
+				mVector a;
 				std::transform(begin(), end(), a.begin(), ::fabs);
 				return a;
 			}
 
 			T sqr() const
-			{ 
-				T v = 0; 
+			{
+				T v = 0;
 				for (auto x : *this)
 					v += x*x;
 				return v;
 			}
 
 			T norm() const
-			{ 
+			{
 				return sqrt(sqr());
 			}
 

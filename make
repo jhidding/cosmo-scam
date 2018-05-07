@@ -7,7 +7,7 @@
 #	Description: this simple script should be able to compile and
 #	link a simple but well structured c/c++ project.
 # -----------------
-#	Details: compiles every .cc file found in all subdirectories. 
+#	Details: compiles every .cc file found in all subdirectories.
 #	the script checks the modification times of the source files
 #	and their header dependencies against the target files.
 #	finally all .o files are linked to $target.
@@ -24,7 +24,7 @@ RSVG_CFLAGS=$(pkg-config --cflags librsvg-2.0)
 RSVG_LDFLAGS=$(pkg-config --libs librsvg-2.0)
 
 LDFLAGS="-lm -lrt -lfftw3 -lgsl -lgslcblas -lCGAL -lgmp -lboost_thread -lmpfr -fopenmp ${CAIRO_LDFLAGS} ${RSVG_LDFLAGS}"
-CFLAGS="-g -std=c++0x -O2 -frounding-math -fopenmp -I/mnt/Prei/local/include ${CAIRO_CFLAGS} ${RSVG_CFLAGS}"
+CFLAGS="-g -std=c++17 -O2 -frounding-math -fopenmp ${CAIRO_CFLAGS} ${RSVG_CFLAGS} -fPIC"
 
 CC="g++"
 ext=".cc"
@@ -109,7 +109,7 @@ compile_unittest() {
 case "$1" in
 	single)
 		compile $2 ;;
-		
+
 	all)
 		for f in $CCFILES; do
 			compile $f
@@ -175,4 +175,3 @@ case "$1" in
 		echo "'make single' expects one more argument giving a .cc file"
 		echo "that you want to compile."
 esac
-

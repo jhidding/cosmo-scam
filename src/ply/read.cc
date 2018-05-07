@@ -17,7 +17,7 @@ Maybe<std::pair<std::string, std::string>> split(std::string const &line, char c
 		return Nothing;
 	else
 		return Just(pair(
-			line.substr(0, pos), 
+			line.substr(0, pos),
 			line.substr(pos+1, line.length() - pos - 1)));
 }
 
@@ -31,7 +31,7 @@ Maybe<std::pair<std::string, std::string>> split_right(std::string const &line, 
 		return Nothing;
 	else
 		return Just(pair(
-			line.substr(0, pos), 
+			line.substr(0, pos),
 			line.substr(pos+1, line.length() - pos - 1)));
 }
 
@@ -44,7 +44,7 @@ T from_string(std::string const &s)
 	return value;
 }
 
-Format PLY::read_header(std::istream &fi, std::shared_ptr<PLY> ply) throw (Exception)
+Format PLY::read_header(std::istream &fi, std::shared_ptr<PLY> ply)
 {
 	std::string line;
 	Format format;
@@ -64,7 +64,7 @@ Format PLY::read_header(std::istream &fi, std::shared_ptr<PLY> ply) throw (Excep
 			else
 				throw Exception("error in header of .ply file.");
 		}
-	
+
 		if (S->first == "comment")
 		{
 			ply->add_comment(S->second);
@@ -134,10 +134,10 @@ Format PLY::read_header(std::istream &fi, std::shared_ptr<PLY> ply) throw (Excep
 
 				if (S4->first != "uchar")
 					std::cerr << "Warning: list type in .ply with index type other than 'uchar': " << line << std::endl;
-				
+
 				if (make_list_type.count(S4->second) == 0)
 					throw Exception("unrecognized type in 'property' clause in header of .ply file: " + line);
-					
+
 				ply->add_property(*make_list_type[S4->second](name));
 			}
 
@@ -145,7 +145,7 @@ Format PLY::read_header(std::istream &fi, std::shared_ptr<PLY> ply) throw (Excep
 		}
 
 		throw Exception("error in header of .ply file: " + line);
-	} 
+	}
 
 	return format;
 }
@@ -173,4 +173,3 @@ Block PLY::read_element(std::istream &fi, Header::Element const &e, Format forma
 	}
 	return A;
 }
-

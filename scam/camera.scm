@@ -45,14 +45,14 @@
    +------------------------------------------------------------------|#
 
   (export camera-transform parallel-projection
-	  weak-perspective-projection)
+          weak-perspective-projection)
 
   (import (rnrs (6))
-	  (scam lib)
-	  (scam vectors)
-	  (scam polygons)
-	  (scam quaternions)
-	  (scam geometry))
+          (scam lib)
+          (scam vectors)
+          (scam polygons)
+          (scam quaternions)
+          (scam geometry))
 
   (define camera-transform
     (lambda (position target shub projection)
@@ -77,15 +77,15 @@
              (rotate        ($ quat-conjugation (quat-mul roll pitch))))
   
         (case-lambda 
-  	  ((p) (cond
+            ((p) (cond
             ((a-point? p)  ((comp projection rotate translate) p))
             ((a-vector? p) (rotate p))))
   
           ((hint p) (cond 
             ((a-point? p)  ((comp (projection hint) rotate translate) p))
             ((a-vector? p) (rotate p))
-	    ((eq? 'normal-relative hint) (a-dot (a-normalize (a-distance origin (car (polygon-points p)))) 
-						(polygon-normal p)))))))))
+            ((eq? 'normal-relative hint) (a-dot (a-normalize (a-distance origin (car (polygon-points p)))) 
+                                                (polygon-normal p)))))))))
 
   (define parallel-projection
     (comp <- a-vector->list))
@@ -93,6 +93,6 @@
   (define weak-perspective-projection
     (lambda (z0)
       (comp (lambda (x y z) (values (* (/ z0 z) x) (* (/ z0 z) y) z))
-	    <- a-vector->list)))
+            <- a-vector->list)))
 )
 

@@ -32,7 +32,7 @@ Material Scam::make_cluster_label_material(bool rv)
 			cx->set_source_rgb(0,0.5,1);
 		}
 		else
-		{	
+		{
 			cx->set_source_rgb(1,0.9,0.5);
 		}
 		cx->stroke();
@@ -72,9 +72,9 @@ Material Scam::make_cluster_label_material(bool rv)
 	};
 }
 
-Material Scam::make_wall_material(bool rv)
+Material Scam::make_wall_material(bool rv, double a, double b)
 {
-	return [rv] (Info info, Context cx)
+	return [rv, a, b] (Info info, Context cx)
 	{
 		auto s_ = info.get<double>("incidence");
 		auto d_ = info.get<double>("density");
@@ -82,8 +82,8 @@ Material Scam::make_wall_material(bool rv)
 		if (s_) s = fabs(*s_);
 		if (d_) d = sqrt(*d_);
 
-		d = std::max(5., d); d = std::min(10., d);
-		d = (d - 5.) / 5.;
+		d = std::max(a, d); d = std::min(b, d);
+		d = (d - a) / (b - a);
 
 
 		auto Z = (rv ?
@@ -92,7 +92,7 @@ Material Scam::make_wall_material(bool rv)
 
 		cx->set_source_rgba(Z.r(), Z.g(), Z.b(), Z.a());
 		cx->fill_preserve();
-		
+
 		if (rv) cx->set_source_rgba(0,0,0,0.2);
 		else cx->set_source_rgba(1,1,1,0.18);
 
@@ -101,15 +101,15 @@ Material Scam::make_wall_material(bool rv)
 	};
 }
 
-Material Scam::make_filament_material(bool rv)
+Material Scam::make_filament_material(bool rv, double a, double b)
 {
-	return [rv] (Info info, Context cx)
+	return [rv, a, b] (Info info, Context cx)
 	{
 		auto d_ = info.get<double>("density");
 		double d;
 		if (d_) d = sqrt(*d_);
-		d = std::max(10., d); d = std::min(30., d);
-		d = (d - 10.) / 20.;
+		d = std::max(a, d); d = std::min(b, d);
+		d = (d - a) / (b - a);
 		cx->set_line_cap(Cairo::LINE_CAP_ROUND);
 
 		if (rv)
@@ -121,7 +121,7 @@ Material Scam::make_filament_material(bool rv)
 			cx->set_source_rgba(1,1,1,0.7);
 			cx->stroke();
 		}
-		else 
+		else
 		{
 			cx->set_line_width(0.023 * d);
 			cx->set_source_rgba(1,1,1,0.5);
@@ -252,7 +252,7 @@ Material Scam::make_rainbow_material(bool rv, double a, double b)
 
 		cx->set_source_rgba(Z.r(), Z.g(), Z.b(), Z.a());
 		cx->fill_preserve();
-		
+
 		if (rv) cx->set_source_rgba(0,0,0,0.2);
 		else cx->set_source_rgba(1,1,1,0.18);
 
@@ -286,7 +286,7 @@ Material Scam::make_mistwall_material(bool rv, double a, double b)
 
 		cx->set_source_rgba(Z.r(), Z.g(), Z.b(), Z.a());
 		cx->fill_preserve();
-		
+
 		if (rv) cx->set_source_rgba(0,0,0,0.2);
 		else cx->set_source_rgba(1,1,1,0.18);
 
@@ -316,7 +316,7 @@ Material Scam::make_mistfila_material(bool rv, double a, double b)
 			cx->set_source_rgba(1,1,1,0.7);
 			cx->stroke();
 		}
-		else 
+		else
 		{
 			cx->set_line_width(0.023 * d);
 			cx->set_source_rgba(1,1,1,0.5);
@@ -327,4 +327,3 @@ Material Scam::make_mistfila_material(bool rv, double a, double b)
 		}
 	};
 }
-

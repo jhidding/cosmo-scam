@@ -106,6 +106,13 @@ namespace Scam
 				return B;
 			}
 	};
+	
+	inline Camera::Projection weak_perspective_projection(double s)
+	{
+	    return [s] (Vector const &v) {
+	        return Point(s * v.x() / v.z(), s * v.y() / v.z(), v.z());
+	    };
+    }
 
 	inline Point parallel_projection(Vector const &v)
 	{
