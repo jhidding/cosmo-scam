@@ -25,6 +25,52 @@ namespace Abell
 	extern std::istream &operator>>(std::istream &in, Cluster &C);
 }
 
+namespace FornaxData
+{
+	struct Galaxy {
+		std::string id;
+		double RA        
+		     , DEC       
+		     , Reff      
+		     , r_mag     
+		     , g_mag     
+		     , axis_ratio
+		     , pos_angle 
+		     , nuc_r     
+		     , nuc_g     
+		     , n         
+		     , u         
+		     , g         
+		     , r         
+		     , i         
+		     , C         
+		     , A         
+		     , S         
+		     , quality   
+		     , ue        
+		     , ge        
+		     , re        
+		     , ie        
+		     , RFF       
+		     , EVI;
+	};
+
+	inline std::istream &operator>>(std::istream &in, Galaxy &G)
+	{
+		std::string line;
+		do {
+			std::getline(in, line);
+		} while (line[0] == '#');
+
+		std::istringstream ss(line);
+		ss >> G.id >> G.RA >> G.DEC >> G.Reff >> G.r_mag >> G.g_mag
+		   >> G.axis_ratio >> G.pos_angle >> G.nuc_r >> G.nuc_g
+		   >> G.n >> G.u >> G.g >> G.r >> G.i >> G.C >> G.A >> G.S
+		   >> G.quality >> G.ue >> G.ge >> G.re >> G.ie >> G.RFF >> G.EVI;
+		return in;
+	}
+}
+
 
 namespace FOF
 {

@@ -71,6 +71,26 @@ Scam::Array<Scam::Segment> Scam::read_segments(std::istream &fi, Scam::ptr<PLY::
 	return result;
 }
 
+Array<Vertex> Scam::read_fornax(std::string const &fn)
+{
+	Array<Vertex> A;
+
+	std::ifstream fi(fn);
+	while (!fi.eof()) {
+		FornaxData::Galaxy G; fi >> G;
+		if (G.id == "") continue;
+
+		double sg_ra, sg_dec;
+		eq_to_sg(radians(G.RA), radians(G.DEC), sg_ra, sg_dec);
+		Vertex v(
+			Point(90, 90, 90) + spherical_to_cartesian(sg_ra, sg_dec, 1.0));
+		v.set_info("magnitude", G.g_mag);
+		A.push_back(v);
+	}
+
+	return A;
+}
+
 Array<Vertex> Scam::read_abell(std::string const &fn, bool dist, bool rv)
 {
 	std::cerr << "Reading Abell cluster catalog upto redshift 0.03 ... ";

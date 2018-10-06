@@ -7,19 +7,163 @@ namespace Scam
 {
 	using TwoMass::radians;
 	using TwoMass::ga_to_sg;
+    using TwoMass::eq_to_sg;
 	using TwoMass::spherical_to_cartesian;
 
-	class Tully_filter
+	class Fornax_filter
 	{
-  		// A262	136.59	-25.09	 0.0161	
-  		// A426	150.39	-13.38	 0.0183	Perseus
-  		// A347	141.17	-17.63	 0.0187	
 
 		Sphere 	S;
 		Vector  hub;
 		//Array<Segment> fogs;
 
-		public:                 
+		public:
+			Fornax_filter(double radius)
+			{
+				Point Earth(90,90,90);
+
+				double ra, dec;
+				eq_to_sg(radians(55.050), radians(-18.580), ra, dec);
+				Point NGC1407 = Earth + spherical_to_cartesian(ra, dec, 17.79);
+				eq_to_sg(radians(65.002), radians(-54.938), ra, dec);
+				Point NGC1566 = Earth + spherical_to_cartesian(ra, dec, 15.04);
+
+				S = Sphere(NGC1407 + (NGC1566 - NGC1407) / 2., radius);
+				hub = Vector(0, 0, 1.0);
+			}
+
+			Point center() const { return S.origin(); }
+			Vector shub() const { return hub; }
+			Array<Segment> fog() const { return Array<Segment>(0); }
+
+			Array<Vertex> operator()(Array<Vertex> A) const
+			{
+				Array<Vertex> B;
+				for (Vertex const &a : A)
+				{
+					if (S.is_below(a)) // and Top.is_below(a) and Bottom.is_below(a))
+						B.push_back(a);
+				}
+				return B;
+			}
+
+			Array<Polygon> operator()(Array<Polygon> A) const
+			{
+				Array<Polygon> B;
+
+				for (Polygon const &a : A)
+				{
+					auto T = S.split_polygon(a);
+						if (not T.first) continue;
+					/*auto U = Top.split_polygon(*T.first);
+						if (not U.first) continue;
+					auto V = Bottom.split_polygon(*U.first);
+						if (not V.first) continue;*/
+					B.push_back(*T.first);
+				}
+
+				return B;
+			}
+
+			Array<Segment> operator()(Array<Segment> A) const
+			{
+				Array<Segment> B;
+
+				for (Segment const &a : A)
+				{
+					auto T = S.split_segment(a);
+						if (not T.first) continue;
+					/*auto U = Top.split_segment(*T.first);
+						if (not U.first) continue;
+					auto V = Bottom.split_segment(*U.first);
+						if (not V.first) continue;*/
+					B.push_back(*T.first);
+				}
+
+				return B;
+			}
+	};
+
+	class Home_filter
+	{
+  		// A262	136.59	-25.09	 0.0161
+  		// A426	150.39	-13.38	 0.0183	Perseus
+  		// A347	141.17	-17.63	 0.0187
+
+		Sphere 	S;
+		Vector  hub;
+		//Array<Segment> fogs;
+
+		public:
+			Home_filter(double radius)
+			{
+				S = Sphere(Point(90, 90, 90), radius);
+				hub = Vector(0, 0, 1);
+			}
+
+			Point center() const { return S.origin(); }
+			Vector shub() const { return hub; }
+			Array<Segment> fog() const { return Array<Segment>(0); }
+
+			Array<Vertex> operator()(Array<Vertex> A) const
+			{
+				Array<Vertex> B;
+				for (Vertex const &a : A)
+				{
+					if (S.is_below(a)) // and Top.is_below(a) and Bottom.is_below(a))
+						B.push_back(a);
+				}
+				return B;
+			}
+
+			Array<Polygon> operator()(Array<Polygon> A) const
+			{
+				Array<Polygon> B;
+
+				for (Polygon const &a : A)
+				{
+					auto T = S.split_polygon(a);
+						if (not T.first) continue;
+					/*auto U = Top.split_polygon(*T.first);
+						if (not U.first) continue;
+					auto V = Bottom.split_polygon(*U.first);
+						if (not V.first) continue;*/
+					B.push_back(*T.first);
+				}
+
+				return B;
+			}
+
+			Array<Segment> operator()(Array<Segment> A) const
+			{
+				Array<Segment> B;
+
+				for (Segment const &a : A)
+				{
+					auto T = S.split_segment(a);
+						if (not T.first) continue;
+					/*auto U = Top.split_segment(*T.first);
+						if (not U.first) continue;
+					auto V = Bottom.split_segment(*U.first);
+						if (not V.first) continue;*/
+					B.push_back(*T.first);
+				}
+
+				return B;
+			}
+	};
+
+	class Tully_filter
+	{
+  		// A262	136.59	-25.09	 0.0161
+  		// A426	150.39	-13.38	 0.0183	Perseus
+  		// A347	141.17	-17.63	 0.0187
+
+		Sphere 	S;
+		Vector  hub;
+		//Array<Segment> fogs;
+
+		public:
 			Tully_filter(double radius)
 			{
 				S = Sphere(Point(75, 90, 125), radius);
@@ -27,7 +171,7 @@ namespace Scam
 			}
 
 			Point center() const { return S.origin(); }
-			Vector shub() const { return hub; } 
+			Vector shub() const { return hub; }
 			Array<Segment> fog() const { return Array<Segment>(0); }
 
 			Array<Vertex> operator()(Array<Vertex> A) const
@@ -80,15 +224,15 @@ namespace Scam
 
 	class Perseus_filter
 	{
-  		// A262	136.59	-25.09	 0.0161	
+  		// A262	136.59	-25.09	 0.0161
   		// A426	150.39	-13.38	 0.0183	Perseus
-  		// A347	141.17	-17.63	 0.0187	
+  		// A347	141.17	-17.63	 0.0187
 
 		Sphere 	S;
 		Vector  hub;
 		Array<Segment> fogs;
 
-		public:                 
+		public:
 			Perseus_filter(double radius)
 			{
 				Point Earth(90,90,90);
@@ -116,7 +260,7 @@ namespace Scam
 			}
 
 			Point center() const { return S.origin(); }
-			Vector shub() const { return hub; } 
+			Vector shub() const { return hub; }
 			Array<Segment> fog() const { return fogs; }
 
 			Array<Vertex> operator()(Array<Vertex> A) const
@@ -171,7 +315,7 @@ namespace Scam
 	{
 		// the plane of the Coma great wall aligns with these
 		// three Abell clusters, A779, Leo and Coma.
-		//  A779	191.07	 44.41	0.0226 
+		//  A779	191.07	 44.41	0.0226
 		// A1367	234.81	 73.03	0.0215 Leo
 		// A1656	 58.09	 87.96	0.0232 Coma
 
@@ -180,7 +324,7 @@ namespace Scam
 		Vector  hub, m_normal;
 		Array<Segment> fogs;
 
-		public:                 
+		public:
 			Coma_filter(double width, double radius)
 			{
 				double ra, dec;
@@ -211,7 +355,7 @@ namespace Scam
 			}
 
 			Point center() const { return P.origin(); }
-			Vector shub() const { return hub; } 
+			Vector shub() const { return hub; }
 			Vector normal() const { return m_normal; }
 			Array<Segment> fog() const { return fogs; }
 
@@ -263,4 +407,3 @@ namespace Scam
 			}
 	};
 }
-
